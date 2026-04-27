@@ -1,0 +1,1 @@
+import{F as e}from"./app-C5dvP8s4.js";var t=e(`Navigation`,[[`polygon`,{points:`3 11 22 2 13 21 11 13 3 11`,key:`1ltx0t`}]]);export{t};
