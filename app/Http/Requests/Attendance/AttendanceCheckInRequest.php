@@ -14,7 +14,7 @@ class AttendanceCheckInRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ViewOwnAttendance->value) ?? false;
+        return $this->user()?->can(SystemPermission::CreateOwnAttendance->value) ?? false;
     }
 
     /**

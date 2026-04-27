@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\SystemPermission;
+use App\Models\SchoolLocation;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,7 +14,11 @@ class SchoolLocationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ManageSchoolLocations->value) ?? false;
+        $permission = SchoolLocation::query()->exists()
+            ? SystemPermission::UpdateSchoolLocations
+            : SystemPermission::CreateSchoolLocations;
+
+        return $this->user()?->can($permission->value) ?? false;
     }
 
     /**

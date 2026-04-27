@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UserRequest;
+use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -58,7 +62,41 @@ class UserController extends Controller
                 'linkedStudents' => Student::query()->whereNotNull('user_id')->count(),
                 'withoutRole' => User::query()->doesntHave('roles')->count(),
             ],
+            'schoolClasses' => SchoolClass::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'grade_level', 'academic_year']),
         ]);
+    }
+
+    public function store(UserRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'email_verified_at' => $validated['email_verified'] ? now() : null,
+            'password' => Hash::make($validated['password'] ?: 'password'),
+        ]);
+
+        $user->syncRoles([$validated['role']]);
+
+        if ($validated['role'] === UserRole::Student->value && $validated['create_student_profile']) {
+            Student::create([
+                'user_id' => $user->id,
+                'school_class_id' => $validated['school_class_id'],
+                'nis' => $validated['nis'] ?: null,
+                'nisn' => $validated['nisn'] ?: null,
+                'name' => $user->name,
+                'gender' => $validated['gender'] ?: null,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->successToast('Pengguna berhasil ditambahkan.');
+
+        return to_route('admin.users.index');
     }
 
     private function roleLabel(string $role): string

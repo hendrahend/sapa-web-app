@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     CalendarCheck2,
@@ -106,11 +106,10 @@ function statItems(stats: Props['stats']) {
     ];
 }
 
-export default function AdminClassesIndex({
-    classes,
-    teachers,
-    stats,
-}: Props) {
+export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
+    const { auth } = usePage().props;
+    const canCreateClasses = auth.permissions.includes('classes.create');
+    const canUpdateClasses = auth.permissions.includes('classes.update');
     const [editingClassId, setEditingClassId] = useState<number | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const form = useForm<SchoolClassForm>(emptyForm);
@@ -197,10 +196,7 @@ export default function AdminClassesIndex({
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="sapa-soft-card p-4"
-                        >
+                        <div key={item.label} className="sapa-soft-card p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground">
                                     {item.label}
@@ -215,7 +211,7 @@ export default function AdminClassesIndex({
                 </section>
 
                 <section className="sapa-card overflow-hidden">
-                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-sidebar-border">
                         <div>
                             <h2 className="text-lg font-semibold">
                                 Daftar kelas
@@ -224,10 +220,12 @@ export default function AdminClassesIndex({
                                 Tambah dan ubah data kelas melalui modal.
                             </p>
                         </div>
-                        <Button type="button" onClick={addClass}>
-                            <Plus />
-                            Tambah kelas
-                        </Button>
+                        {canCreateClasses && (
+                            <Button type="button" onClick={addClass}>
+                                <Plus />
+                                Tambah kelas
+                            </Button>
+                        )}
                     </div>
 
                     <div className="overflow-x-auto">
@@ -271,8 +269,7 @@ export default function AdminClassesIndex({
                                             </p>
                                             <p className="mt-1 text-muted-foreground">
                                                 Tingkat{' '}
-                                                {schoolClass.grade_level ??
-                                                    '-'}{' '}
+                                                {schoolClass.grade_level ?? '-'}{' '}
                                                 -{' '}
                                                 {schoolClass.academic_year ??
                                                     '-'}
@@ -346,17 +343,19 @@ export default function AdminClassesIndex({
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                    editClass(schoolClass)
-                                                }
-                                            >
-                                                <Pencil />
-                                                Edit
-                                            </Button>
+                                            {canUpdateClasses && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        editClass(schoolClass)
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -395,9 +394,7 @@ export default function AdminClassesIndex({
 
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="grade_level">
-                                        Tingkat
-                                    </Label>
+                                    <Label htmlFor="grade_level">Tingkat</Label>
                                     <Input
                                         id="grade_level"
                                         value={form.data.grade_level}
@@ -492,7 +489,10 @@ export default function AdminClassesIndex({
                                 >
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={form.processing}>
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
                                     {editingClass
                                         ? 'Simpan perubahan'
                                         : 'Simpan kelas'}

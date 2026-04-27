@@ -20,9 +20,9 @@ test('sapa base roles and permissions can be seeded', function () {
     $teacher = User::factory()->create();
     $teacher->assignRole(UserRole::Teacher->value);
 
-    expect($teacher->can(SystemPermission::ManageAttendance->value))->toBeTrue()
-        ->and($teacher->can(SystemPermission::ManageGrades->value))->toBeTrue()
-        ->and($teacher->can(SystemPermission::ManageUsers->value))->toBeFalse();
+    expect($teacher->can(SystemPermission::CreateAttendance->value))->toBeTrue()
+        ->and($teacher->can(SystemPermission::UpdateGrades->value))->toBeTrue()
+        ->and($teacher->can(SystemPermission::CreateUsers->value))->toBeFalse();
 });
 
 test('admin user seed has every permission through the admin role', function () {

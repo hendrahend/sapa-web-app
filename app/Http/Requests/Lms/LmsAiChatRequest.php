@@ -5,16 +5,15 @@ namespace App\Http\Requests\Lms;
 use App\Enums\SystemPermission;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-class LmsCourseRequest extends FormRequest
+class LmsAiChatRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::CreateLms->value) ?? false;
+        return $this->user()?->can(SystemPermission::ViewLms->value) ?? false;
     }
 
     /**
@@ -25,11 +24,11 @@ class LmsCourseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')],
-            'school_class_id' => ['required', 'integer', Rule::exists('school_classes', 'id')],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:2000'],
-            'is_active' => ['required', 'boolean'],
+            'message' => ['required', 'string', 'max:2000'],
+            'context' => ['nullable', 'array'],
+            'context.courses' => ['nullable', 'array', 'max:5'],
+            'context.materials' => ['nullable', 'array', 'max:5'],
+            'context.assignments' => ['nullable', 'array', 'max:5'],
         ];
     }
 }

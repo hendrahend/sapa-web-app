@@ -14,7 +14,8 @@ class GradeScoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ManageGrades->value) ?? false;
+        return ($this->user()?->can(SystemPermission::CreateGrades->value) ?? false)
+            || ($this->user()?->can(SystemPermission::UpdateGrades->value) ?? false);
     }
 
     /**

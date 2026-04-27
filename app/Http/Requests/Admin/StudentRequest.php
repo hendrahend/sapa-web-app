@@ -15,7 +15,11 @@ class StudentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ManageUsers->value) ?? false;
+        $permission = $this->route('student')
+            ? SystemPermission::UpdateStudents
+            : SystemPermission::CreateStudents;
+
+        return $this->user()?->can($permission->value) ?? false;
     }
 
     /**

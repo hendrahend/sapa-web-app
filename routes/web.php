@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Grades\GradeAssessmentController;
 use App\Http\Controllers\Grades\GradeController;
 use App\Http\Controllers\Grades\GradeScoreController;
+use App\Http\Controllers\Lms\LmsAiChatController;
 use App\Http\Controllers\Lms\LmsAssignmentController;
 use App\Http\Controllers\Lms\LmsController;
 use App\Http\Controllers\Lms\LmsCourseController;
@@ -28,96 +29,103 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('attendance', [AttendanceController::class, 'index'])
-        ->middleware('permission:attendance.manage|attendance.view|attendance.own.view')
+        ->middleware('permission:attendance.view|attendance.own.view')
         ->name('attendance.index');
 
-    Route::post('attendance/sessions', [AttendanceSessionController::class, 'store'])
-        ->middleware('permission:attendance.manage')
-        ->name('attendance.sessions.store');
+    Route::resource('attendance/sessions', AttendanceSessionController::class)
+        ->only('store')
+        ->names('attendance.sessions')
+        ->middleware('permission:attendance.create');
 
     Route::post('attendance/check-in', [AttendanceCheckInController::class, 'store'])
-        ->middleware('permission:attendance.own.view')
+        ->middleware('permission:attendance.own.create')
         ->name('attendance.check-in.store');
 
     Route::get('grades', [GradeController::class, 'index'])
-        ->middleware('permission:grades.manage|grades.view')
+        ->middleware('permission:grades.view')
         ->name('grades.index');
 
-    Route::post('grades/assessments', [GradeAssessmentController::class, 'store'])
-        ->middleware('permission:grades.manage')
-        ->name('grades.assessments.store');
+    Route::resource('grades/assessments', GradeAssessmentController::class)
+        ->only('store')
+        ->names('grades.assessments')
+        ->middleware('permission:grades.create');
 
-    Route::post('grades/scores', [GradeScoreController::class, 'store'])
-        ->middleware('permission:grades.manage')
-        ->name('grades.scores.store');
+    Route::resource('grades/scores', GradeScoreController::class)
+        ->only('store')
+        ->names('grades.scores')
+        ->middleware('permission:grades.create|grades.update');
 
     Route::get('lms', [LmsController::class, 'index'])
-        ->middleware('permission:lms.manage|lms.view')
+        ->middleware('permission:lms.view')
         ->name('lms.index');
 
-    Route::post('lms/courses', [LmsCourseController::class, 'store'])
-        ->middleware('permission:lms.manage')
-        ->name('lms.courses.store');
+    Route::resource('lms/ai/chat', LmsAiChatController::class)
+        ->only('store')
+        ->names('lms.ai.chat')
+        ->middleware('permission:lms.view');
 
-    Route::post('lms/materials', [LmsMaterialController::class, 'store'])
-        ->middleware('permission:lms.manage')
-        ->name('lms.materials.store');
+    Route::resource('lms/courses', LmsCourseController::class)
+        ->only('store')
+        ->names('lms.courses')
+        ->middleware('permission:lms.create');
 
-    Route::post('lms/assignments', [LmsAssignmentController::class, 'store'])
-        ->middleware('permission:lms.manage')
-        ->name('lms.assignments.store');
+    Route::resource('lms/materials', LmsMaterialController::class)
+        ->only('store')
+        ->names('lms.materials')
+        ->middleware('permission:lms.create');
 
-    Route::post('lms/assignments/{assignment}/submissions', [LmsSubmissionController::class, 'store'])
-        ->middleware('permission:lms.assignments.submit')
-        ->name('lms.assignments.submissions.store');
+    Route::resource('lms/assignments', LmsAssignmentController::class)
+        ->only('store')
+        ->names('lms.assignments')
+        ->middleware('permission:lms.create');
+
+    Route::resource('lms/assignments.submissions', LmsSubmissionController::class)
+        ->only('store')
+        ->names('lms.assignments.submissions')
+        ->middleware('permission:lms.assignments.submit');
 
     Route::inertia('xp', 'xp/index')
-        ->middleware('permission:xp.manage|xp.view')
+        ->middleware('permission:xp.view')
         ->name('xp.index');
 
     Route::inertia('notifications', 'notifications/index')
-        ->middleware('permission:notifications.manage|notifications.view')
+        ->middleware('permission:notifications.view')
         ->name('notifications.index');
 
-    Route::get('admin/users', [UserController::class, 'index'])
-        ->middleware('permission:users.manage')
-        ->name('admin.users.index');
+    Route::resource('admin/users', UserController::class)
+        ->only(['index', 'store'])
+        ->names('admin.users')
+        ->middlewareFor('index', 'permission:users.view')
+        ->middlewareFor('store', 'permission:users.create');
 
-    Route::get('admin/students', [StudentController::class, 'index'])
-        ->middleware('permission:users.manage')
-        ->name('admin.students.index');
+    Route::resource('admin/students', StudentController::class)
+        ->only(['index', 'store', 'update'])
+        ->names('admin.students')
+        ->middlewareFor('index', 'permission:students.view')
+        ->middlewareFor('store', 'permission:students.create')
+        ->middlewareFor('update', 'permission:students.update');
 
-    Route::post('admin/students', [StudentController::class, 'store'])
-        ->middleware('permission:users.manage')
-        ->name('admin.students.store');
+    Route::resource('admin/classes', SchoolClassController::class)
+        ->only(['index', 'store', 'update'])
+        ->parameters(['classes' => 'schoolClass'])
+        ->names('admin.classes')
+        ->middlewareFor('index', 'permission:classes.view')
+        ->middlewareFor('store', 'permission:classes.create')
+        ->middlewareFor('update', 'permission:classes.update');
 
-    Route::put('admin/students/{student}', [StudentController::class, 'update'])
-        ->middleware('permission:users.manage')
-        ->name('admin.students.update');
+    Route::resource('admin/roles', RolePermissionController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.roles')
+        ->middlewareFor('index', 'permission:roles.view')
+        ->middlewareFor('store', 'permission:roles.create')
+        ->middlewareFor('update', 'permission:roles.update')
+        ->middlewareFor('destroy', 'permission:roles.delete');
 
-    Route::get('admin/classes', [SchoolClassController::class, 'index'])
-        ->middleware('permission:users.manage')
-        ->name('admin.classes.index');
-
-    Route::post('admin/classes', [SchoolClassController::class, 'store'])
-        ->middleware('permission:users.manage')
-        ->name('admin.classes.store');
-
-    Route::put('admin/classes/{schoolClass}', [SchoolClassController::class, 'update'])
-        ->middleware('permission:users.manage')
-        ->name('admin.classes.update');
-
-    Route::get('admin/roles', [RolePermissionController::class, 'index'])
-        ->middleware('permission:users.manage')
-        ->name('admin.roles.index');
-
-    Route::get('admin/school-location', [SchoolLocationController::class, 'index'])
-        ->middleware('permission:school_locations.manage')
-        ->name('admin.school-location.index');
-
-    Route::put('admin/school-location', [SchoolLocationController::class, 'store'])
-        ->middleware('permission:school_locations.manage')
-        ->name('admin.school-location.store');
+    Route::resource('admin/school-location', SchoolLocationController::class)
+        ->only(['index', 'store'])
+        ->names('admin.school-location')
+        ->middlewareFor('index', 'permission:school_locations.view')
+        ->middlewareFor('store', 'permission:school_locations.create|school_locations.update');
 });
 
 require __DIR__.'/settings.php';

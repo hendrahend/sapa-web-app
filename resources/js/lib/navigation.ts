@@ -23,35 +23,31 @@ const mainNavItems: NavItem[] = [
         title: 'Absensi',
         href: '/attendance',
         icon: ClipboardCheck,
-        permissions: [
-            'attendance.manage',
-            'attendance.view',
-            'attendance.own.view',
-        ],
+        permissions: ['attendance.view', 'attendance.own.view'],
     },
     {
         title: 'Penilaian',
         href: '/grades',
         icon: GraduationCap,
-        permissions: ['grades.manage', 'grades.view'],
+        permissions: ['grades.view'],
     },
     {
         title: 'LMS',
         href: '/lms',
         icon: BookOpen,
-        permissions: ['lms.manage', 'lms.view'],
+        permissions: ['lms.view'],
     },
     {
         title: 'XP',
         href: '/xp',
         icon: Award,
-        permissions: ['xp.manage', 'xp.view'],
+        permissions: ['xp.view'],
     },
     {
         title: 'Notifikasi',
         href: '/notifications',
         icon: Bell,
-        permissions: ['notifications.manage', 'notifications.view'],
+        permissions: ['notifications.view'],
     },
 ];
 
@@ -60,31 +56,31 @@ const adminNavItems: NavItem[] = [
         title: 'Pengguna',
         href: '/admin/users',
         icon: Users,
-        permissions: ['users.manage'],
+        permissions: ['users.view'],
     },
     {
         title: 'Siswa & Orang Tua',
         href: '/admin/students',
         icon: IdCard,
-        permissions: ['users.manage'],
+        permissions: ['students.view'],
     },
     {
         title: 'Data Kelas',
         href: '/admin/classes',
         icon: School,
-        permissions: ['users.manage'],
+        permissions: ['classes.view'],
     },
     {
         title: 'Role & Permission',
         href: '/admin/roles',
         icon: ShieldCheck,
-        permissions: ['users.manage'],
+        permissions: ['roles.view'],
     },
     {
         title: 'Lokasi Sekolah',
         href: '/admin/school-location',
         icon: MapPinned,
-        permissions: ['school_locations.manage'],
+        permissions: ['school_locations.view'],
     },
 ];
 

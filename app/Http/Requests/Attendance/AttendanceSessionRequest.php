@@ -14,7 +14,7 @@ class AttendanceSessionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ManageAttendance->value) ?? false;
+        return $this->user()?->can(SystemPermission::CreateAttendance->value) ?? false;
     }
 
     /**

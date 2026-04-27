@@ -146,6 +146,11 @@ type SubmissionForm = {
     content: string;
 };
 
+type AiChatMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+};
+
 type LmsModal = 'course' | 'material' | 'assignment' | null;
 
 function formatDateTime(value: string | null) {
@@ -189,6 +194,14 @@ function isOverdue(assignment: Assignment) {
         : false;
 }
 
+function csrfToken() {
+    return (
+        document
+            .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+            ?.getAttribute('content') ?? ''
+    );
+}
+
 export default function LmsIndex({
     subjects,
     schoolClasses,
@@ -199,13 +212,19 @@ export default function LmsIndex({
     stats,
 }: Props) {
     const { auth } = usePage().props;
-    const canManageLms = auth.permissions.includes('lms.manage');
+    const canManageLms = ['lms.create', 'lms.update', 'lms.delete'].some(
+        (permission) => auth.permissions.includes(permission),
+    );
     const canSubmitAssignments =
         auth.permissions.includes('lms.assignments.submit') && !canManageLms;
     const [activeModal, setActiveModal] = useState<LmsModal>(null);
     const [selectedAssignment, setSelectedAssignment] =
         useState<Assignment | null>(null);
     const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+    const [aiInput, setAiInput] = useState('');
+    const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([]);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     const courseForm = useForm<CourseForm>({
         subject_id: subjects[0]?.id.toString() ?? '',
@@ -355,6 +374,102 @@ export default function LmsIndex({
         );
     }
 
+    function buildAiContext() {
+        return {
+            courses: filteredCourses.slice(0, 5).map((course) => ({
+                title: course.title,
+                subject: course.subject.name,
+                class: course.school_class.name,
+                description: course.description,
+                materials_count: course.materials_count,
+                assignments_count: course.assignments_count,
+            })),
+            materials: filteredMaterials.slice(0, 5).map((material) => ({
+                title: material.title,
+                course: material.course.title,
+                subject: material.course.subject.name,
+                class: material.course.school_class.name,
+                content: material.content.slice(0, 600),
+            })),
+            assignments: filteredAssignments.slice(0, 5).map((assignment) => ({
+                title: assignment.title,
+                course: assignment.course.title,
+                subject: assignment.course.subject.name,
+                class: assignment.course.school_class.name,
+                instructions: assignment.instructions.slice(0, 600),
+                due_at: assignment.due_at,
+                max_score: assignment.max_score,
+            })),
+        };
+    }
+
+    async function submitAiChat(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        const message = aiInput.trim();
+
+        if (!message || aiLoading) {
+            return;
+        }
+
+        setAiInput('');
+        setAiError(null);
+        setAiLoading(true);
+        setAiMessages((messages) => [
+            ...messages,
+            {
+                role: 'user',
+                content: message,
+            },
+        ]);
+
+        try {
+            const response = await fetch('/lms/ai/chat', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                body: JSON.stringify({
+                    message,
+                    context: buildAiContext(),
+                }),
+            });
+            const payload = (await response.json()) as {
+                answer?: string;
+                message?: string;
+            };
+
+            if (!response.ok || !payload.answer) {
+                throw new Error(
+                    payload.message ?? 'AI LMS belum bisa menjawab.',
+                );
+            }
+
+            setAiMessages((messages) => [
+                ...messages,
+                {
+                    role: 'assistant',
+                    content: payload.answer ?? '',
+                },
+            ]);
+        } catch (error) {
+            setAiError(
+                error instanceof Error
+                    ? error.message
+                    : 'AI LMS belum bisa dihubungi.',
+            );
+        } finally {
+            setAiLoading(false);
+        }
+    }
+
+    function setAiPrompt(prompt: string) {
+        setAiInput(prompt);
+        setAiError(null);
+    }
+
     return (
         <>
             <Head title="LMS" />
@@ -408,7 +523,10 @@ export default function LmsIndex({
                 {canManageLms && (
                     <section className="grid gap-4 md:grid-cols-3">
                         {statItems(stats).map((item) => (
-                            <div key={item.label} className="sapa-soft-card p-4">
+                            <div
+                                key={item.label}
+                                className="sapa-soft-card p-4"
+                            >
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-sm text-muted-foreground">
                                         {item.label}
@@ -424,22 +542,127 @@ export default function LmsIndex({
                 )}
 
                 <section className="rounded-lg border border-primary/25 bg-linear-to-br from-secondary/80 to-primary/10 p-4 shadow-sm">
-                    <div className="flex items-start gap-3">
-                        <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm">
-                            <BrainCircuit className="size-5" />
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="text-lg font-semibold">
-                                    AI LMS
-                                </h2>
-                                <Badge variant="secondary">Pondasi siap</Badge>
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,460px)]">
+                        <div className="flex items-start gap-3">
+                            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm">
+                                <BrainCircuit className="size-5" />
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                                Materi dan tugas akan menjadi sumber fitur AI:
-                                rangkum materi, buat soal latihan, dan bantu
-                                feedback tugas siswa.
-                            </p>
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 className="text-lg font-semibold">
+                                        AI LMS
+                                    </h2>
+                                    <Badge variant="secondary">
+                                        Groq llama-3.1
+                                    </Badge>
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                    Tanya AI berdasarkan course, materi, dan
+                                    tugas yang sedang tampil. Cocok untuk
+                                    rangkuman, ide soal, rubrik, dan bantuan
+                                    memahami materi.
+                                </p>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setAiPrompt(
+                                                'Buatkan rangkuman singkat dari materi LMS yang tampil.',
+                                            )
+                                        }
+                                    >
+                                        <Sparkles />
+                                        Rangkum
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setAiPrompt(
+                                                'Buatkan 5 soal latihan dari materi LMS yang tampil, lengkap dengan kunci jawaban.',
+                                            )
+                                        }
+                                    >
+                                        <ClipboardList />
+                                        Soal latihan
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setAiPrompt(
+                                                'Buatkan rubrik penilaian sederhana untuk tugas LMS yang tampil.',
+                                            )
+                                        }
+                                    >
+                                        <FileText />
+                                        Rubrik
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border">
+                            <div className="max-h-72 min-h-44 space-y-3 overflow-y-auto p-3">
+                                {aiMessages.length === 0 && (
+                                    <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-sidebar-border/70 p-4 text-center text-sm text-muted-foreground dark:border-sidebar-border">
+                                        Mulai tanya AI tentang materi atau tugas
+                                        yang sedang tampil.
+                                    </div>
+                                )}
+
+                                {aiMessages.map((message, index) => (
+                                    <div
+                                        key={`${message.role}-${index}`}
+                                        className={
+                                            message.role === 'user'
+                                                ? 'ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground'
+                                                : 'max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm leading-6 whitespace-pre-wrap'
+                                        }
+                                    >
+                                        {message.content}
+                                    </div>
+                                ))}
+
+                                {aiLoading && (
+                                    <div className="max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                        AI sedang menyusun jawaban...
+                                    </div>
+                                )}
+                            </div>
+
+                            <form
+                                onSubmit={submitAiChat}
+                                className="border-t border-sidebar-border/70 p-3 dark:border-sidebar-border"
+                            >
+                                {aiError && (
+                                    <p className="mb-2 text-sm text-destructive">
+                                        {aiError}
+                                    </p>
+                                )}
+                                <div className="flex gap-2">
+                                    <textarea
+                                        value={aiInput}
+                                        onChange={(event) =>
+                                            setAiInput(event.target.value)
+                                        }
+                                        placeholder="Tanya AI LMS..."
+                                        rows={2}
+                                        className="min-h-11 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={aiLoading || !aiInput.trim()}
+                                        className="self-end"
+                                    >
+                                        <Send />
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </section>
@@ -452,7 +675,7 @@ export default function LmsIndex({
                 )}
 
                 <section className="sapa-card overflow-hidden">
-                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
                         <div>
                             <h2 className="text-lg font-semibold">
                                 Course aktif
@@ -517,7 +740,9 @@ export default function LmsIndex({
                                                 : 'outline'
                                         }
                                     >
-                                        {course.is_active ? 'Aktif' : 'Nonaktif'}
+                                        {course.is_active
+                                            ? 'Aktif'
+                                            : 'Nonaktif'}
                                     </Badge>
                                 </div>
                                 <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
@@ -601,7 +826,8 @@ export default function LmsIndex({
                             )}
 
                             {filteredAssignments.map((assignment) => {
-                                const submission = currentSubmission(assignment);
+                                const submission =
+                                    currentSubmission(assignment);
                                 const overdue = isOverdue(assignment);
 
                                 return (
@@ -732,9 +958,9 @@ export default function LmsIndex({
                     <div className="flex items-start gap-3">
                         <Sparkles className="mt-1 size-5 text-sky-700 dark:text-sky-300" />
                         <p className="text-sm leading-6 text-muted-foreground">
-                            Tahap berikutnya: hubungkan AI dengan materi LMS
-                            untuk membuat rangkuman, soal otomatis, dan saran
-                            feedback untuk tugas siswa.
+                            AI LMS memakai konteks yang tampil di halaman ini.
+                            Hasilnya tetap perlu dicek guru sebelum dipakai
+                            sebagai materi, soal, atau feedback resmi.
                         </p>
                     </div>
                 </section>
@@ -806,8 +1032,7 @@ export default function LmsIndex({
                                             </Select>
                                             <InputError
                                                 message={
-                                                    courseForm.errors
-                                                        .subject_id
+                                                    courseForm.errors.subject_id
                                                 }
                                             />
                                         </div>
@@ -916,8 +1141,8 @@ export default function LmsIndex({
                                 <DialogHeader>
                                     <DialogTitle>Tambah materi</DialogTitle>
                                     <DialogDescription>
-                                        Materi yang dipublikasikan akan muncul di
-                                        LMS siswa.
+                                        Materi yang dipublikasikan akan muncul
+                                        di LMS siswa.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -948,7 +1173,10 @@ export default function LmsIndex({
                                                         value={course.id.toString()}
                                                     >
                                                         {course.title} -{' '}
-                                                        {course.school_class.name}
+                                                        {
+                                                            course.school_class
+                                                                .name
+                                                        }
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1075,7 +1303,10 @@ export default function LmsIndex({
                                                         value={course.id.toString()}
                                                     >
                                                         {course.title} -{' '}
-                                                        {course.school_class.name}
+                                                        {
+                                                            course.school_class
+                                                                .name
+                                                        }
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1200,9 +1431,7 @@ export default function LmsIndex({
                                         </Button>
                                         <Button
                                             type="submit"
-                                            disabled={
-                                                assignmentForm.processing
-                                            }
+                                            disabled={assignmentForm.processing}
                                         >
                                             Simpan tugas
                                         </Button>

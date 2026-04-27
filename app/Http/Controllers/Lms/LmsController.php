@@ -20,7 +20,9 @@ class LmsController extends Controller
     {
         $user = $request->user();
         $student = $user?->student()->with('schoolClass:id,name')->first();
-        $canManage = $user?->can(SystemPermission::ManageLms->value) ?? false;
+        $canManage = ($user?->can(SystemPermission::CreateLms->value) ?? false)
+            || ($user?->can(SystemPermission::UpdateLms->value) ?? false)
+            || ($user?->can(SystemPermission::DeleteLms->value) ?? false);
 
         $courses = LmsCourse::query()
             ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])

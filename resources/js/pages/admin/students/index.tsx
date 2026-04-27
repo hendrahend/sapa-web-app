@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
     Link2,
@@ -164,6 +164,9 @@ export default function AdminStudentsIndex({
     parentUsers,
     stats,
 }: Props) {
+    const { auth } = usePage().props;
+    const canCreateStudents = auth.permissions.includes('students.create');
+    const canUpdateStudents = auth.permissions.includes('students.update');
     const [editingStudentId, setEditingStudentId] = useState<number | null>(
         null,
     );
@@ -293,7 +296,7 @@ export default function AdminStudentsIndex({
                 </section>
 
                 <section className="sapa-card overflow-hidden">
-                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-sidebar-border">
                         <div>
                             <h2 className="text-lg font-semibold">
                                 Daftar siswa
@@ -302,10 +305,12 @@ export default function AdminStudentsIndex({
                                 Tambah dan ubah data siswa melalui modal.
                             </p>
                         </div>
-                        <Button type="button" onClick={addStudent}>
-                            <Plus />
-                            Tambah siswa
-                        </Button>
+                        {canCreateStudents && (
+                            <Button type="button" onClick={addStudent}>
+                                <Plus />
+                                Tambah siswa
+                            </Button>
+                        )}
                     </div>
 
                     <div className="overflow-x-auto">
@@ -382,21 +387,24 @@ export default function AdminStudentsIndex({
                                         </td>
                                         <td className="px-4 py-3 align-top">
                                             <div className="grid gap-2">
-                                                {student.parents.length === 0 && (
+                                                {student.parents.length ===
+                                                    0 && (
                                                     <span className="text-muted-foreground">
                                                         Belum tertaut
                                                     </span>
                                                 )}
-                                                {student.parents.map((parent) => (
-                                                    <div key={parent.id}>
-                                                        <p className="font-medium">
-                                                            {parent.name}
-                                                        </p>
-                                                        <p className="text-muted-foreground">
-                                                            {parent.email}
-                                                        </p>
-                                                    </div>
-                                                ))}
+                                                {student.parents.map(
+                                                    (parent) => (
+                                                        <div key={parent.id}>
+                                                            <p className="font-medium">
+                                                                {parent.name}
+                                                            </p>
+                                                            <p className="text-muted-foreground">
+                                                                {parent.email}
+                                                            </p>
+                                                        </div>
+                                                    ),
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 align-top">
@@ -427,17 +435,19 @@ export default function AdminStudentsIndex({
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                    editStudent(student)
-                                                }
-                                            >
-                                                <Pencil />
-                                                Edit
-                                            </Button>
+                                            {canUpdateStudents && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        editStudent(student)
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -450,9 +460,7 @@ export default function AdminStudentsIndex({
                     <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-3xl">
                         <DialogHeader>
                             <DialogTitle>
-                                {editingStudent
-                                    ? 'Edit siswa'
-                                    : 'Tambah siswa'}
+                                {editingStudent ? 'Edit siswa' : 'Tambah siswa'}
                             </DialogTitle>
                             <DialogDescription>
                                 {editingStudent
@@ -468,10 +476,7 @@ export default function AdminStudentsIndex({
                                     id="name"
                                     value={form.data.name}
                                     onChange={(event) =>
-                                        form.setData(
-                                            'name',
-                                            event.target.value,
-                                        )
+                                        form.setData('name', event.target.value)
                                     }
                                     required
                                 />
@@ -745,7 +750,10 @@ export default function AdminStudentsIndex({
                                 >
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={form.processing}>
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
                                     {editingStudent
                                         ? 'Simpan perubahan'
                                         : 'Simpan siswa'}

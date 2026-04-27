@@ -19,7 +19,9 @@ class GradeController extends Controller
     {
         $user = $request->user();
         $student = $user?->student()->with('schoolClass:id,name')->first();
-        $canManage = $user?->can(SystemPermission::ManageGrades->value) ?? false;
+        $canManage = ($user?->can(SystemPermission::CreateGrades->value) ?? false)
+            || ($user?->can(SystemPermission::UpdateGrades->value) ?? false)
+            || ($user?->can(SystemPermission::DeleteGrades->value) ?? false);
 
         $assessments = GradeAssessment::query()
             ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])

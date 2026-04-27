@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Attendance;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\SystemPermission;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\AttendanceSession;
@@ -18,10 +19,14 @@ class AttendanceController extends Controller
     {
         $user = $request->user();
         $student = $user?->student()->with('schoolClass')->first();
+        $canViewAll = $user?->can(SystemPermission::ViewAttendance->value) ?? false;
 
         $sessions = AttendanceSession::query()
             ->with(['schoolClass:id,name', 'schoolLocation:id,name,radius_meters'])
             ->withCount('records')
+            ->when(! $canViewAll, fn ($query) => $student?->school_class_id
+                ? $query->where('school_class_id', $student->school_class_id)
+                : $query->whereRaw('1 = 0'))
             ->latest('attendance_date')
             ->latest('id')
             ->limit(10)
@@ -52,6 +57,9 @@ class AttendanceController extends Controller
                 'session.schoolClass:id,name',
             ])
             ->whereDate('checked_in_at', now()->toDateString())
+            ->when(! $canViewAll, fn ($query) => $student
+                ? $query->where('student_id', $student->id)
+                : $query->whereRaw('1 = 0'))
             ->latest('checked_in_at')
             ->latest('id')
             ->limit(50)
@@ -101,13 +109,22 @@ class AttendanceController extends Controller
                 'presentToday' => AttendanceRecord::query()
                     ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
                     ->whereDate('checked_in_at', now()->toDateString())
+                    ->when(! $canViewAll, fn ($query) => $student
+                        ? $query->where('student_id', $student->id)
+                        : $query->whereRaw('1 = 0'))
                     ->count(),
                 'lateToday' => AttendanceRecord::query()
                     ->where('status', AttendanceStatus::Late->value)
                     ->whereDate('checked_in_at', now()->toDateString())
+                    ->when(! $canViewAll, fn ($query) => $student
+                        ? $query->where('student_id', $student->id)
+                        : $query->whereRaw('1 = 0'))
                     ->count(),
                 'needsReview' => AttendanceRecord::query()
                     ->where('verification_status', 'pending')
+                    ->when(! $canViewAll, fn ($query) => $student
+                        ? $query->where('student_id', $student->id)
+                        : $query->whereRaw('1 = 0'))
                     ->count(),
             ],
         ]);

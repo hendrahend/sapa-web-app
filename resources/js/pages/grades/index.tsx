@@ -67,10 +67,7 @@ type Score = {
     student: Student & {
         school_class?: Pick<SchoolClass, 'id' | 'name'> | null;
     };
-    assessment: Pick<
-        Assessment,
-        'id' | 'title' | 'type' | 'max_score'
-    > & {
+    assessment: Pick<Assessment, 'id' | 'title' | 'type' | 'max_score'> & {
         subject: Subject;
     };
 };
@@ -81,7 +78,9 @@ type Props = {
     students: Student[];
     assessments: Assessment[];
     scores: Score[];
-    student: (Student & { school_class?: Pick<SchoolClass, 'id' | 'name'> }) | null;
+    student:
+        | (Student & { school_class?: Pick<SchoolClass, 'id' | 'name'> })
+        | null;
     stats: {
         assessments: number;
         scores: number;
@@ -162,7 +161,11 @@ export default function GradesIndex({
     stats,
 }: Props) {
     const { auth } = usePage().props;
-    const canManageGrades = auth.permissions.includes('grades.manage');
+    const canManageGrades = [
+        'grades.create',
+        'grades.update',
+        'grades.delete',
+    ].some((permission) => auth.permissions.includes(permission));
     const assessmentForm = useForm<AssessmentForm>({
         subject_id: subjects[0]?.id.toString() ?? '',
         school_class_id: schoolClasses[0]?.id.toString() ?? '',
@@ -373,9 +376,7 @@ export default function GradesIndex({
                                         <div className="grid gap-2">
                                             <Label>Tipe</Label>
                                             <Select
-                                                value={
-                                                    assessmentForm.data.type
-                                                }
+                                                value={assessmentForm.data.type}
                                                 onValueChange={(value) =>
                                                     assessmentForm.setData(
                                                         'type',
@@ -535,14 +536,11 @@ export default function GradesIndex({
                                                     .grade_assessment_id
                                             }
                                             onValueChange={(value) =>
-                                                scoreForm.setData(
-                                                    (values) => ({
-                                                        ...values,
-                                                        grade_assessment_id:
-                                                            value,
-                                                        student_id: '',
-                                                    }),
-                                                )
+                                                scoreForm.setData((values) => ({
+                                                    ...values,
+                                                    grade_assessment_id: value,
+                                                    student_id: '',
+                                                }))
                                             }
                                         >
                                             <SelectTrigger className="w-full">
@@ -678,9 +676,7 @@ export default function GradesIndex({
                                                     {assessment.title}
                                                 </p>
                                                 <Badge variant="outline">
-                                                    {typeLabel(
-                                                        assessment.type,
-                                                    )}
+                                                    {typeLabel(assessment.type)}
                                                 </Badge>
                                             </div>
                                             <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -770,10 +766,7 @@ export default function GradesIndex({
                                                 </td>
                                                 <td className="px-4 py-3 align-top">
                                                     <p className="font-medium">
-                                                        {
-                                                            score.assessment
-                                                                .title
-                                                        }
+                                                        {score.assessment.title}
                                                     </p>
                                                     <p className="mt-1 text-muted-foreground">
                                                         {

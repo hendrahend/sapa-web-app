@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { Navigation } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -47,7 +47,11 @@ const defaultLocation: LocationForm = {
 };
 
 export default function SchoolLocationIndex({ location }: Props) {
-    const { data, setData, put, processing, errors } = useForm<LocationForm>({
+    const { auth } = usePage().props;
+    const canSaveLocation = auth.permissions.includes(
+        location ? 'school_locations.update' : 'school_locations.create',
+    );
+    const { data, setData, post, processing, errors } = useForm<LocationForm>({
         name: location?.name ?? defaultLocation.name,
         address: location?.address ?? defaultLocation.address,
         latitude: location?.latitude ?? defaultLocation.latitude,
@@ -67,7 +71,12 @@ export default function SchoolLocationIndex({ location }: Props) {
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        put(SchoolLocationController.store.url(), {
+
+        if (!canSaveLocation) {
+            return;
+        }
+
+        post(SchoolLocationController.store.url(), {
             preserveScroll: true,
         });
     }
@@ -182,7 +191,7 @@ export default function SchoolLocationIndex({ location }: Props) {
                                 type="button"
                                 variant="outline"
                                 onClick={useCurrentGps}
-                                disabled={gpsLoading}
+                                disabled={gpsLoading || !canSaveLocation}
                             >
                                 <Navigation />
                                 {gpsLoading
@@ -226,9 +235,11 @@ export default function SchoolLocationIndex({ location }: Props) {
                         </label>
                         <InputError message={errors.is_active} />
 
-                        <Button disabled={processing} className="w-full">
-                            Simpan lokasi
-                        </Button>
+                        {canSaveLocation && (
+                            <Button disabled={processing} className="w-full">
+                                Simpan lokasi
+                            </Button>
+                        )}
                     </div>
                 </form>
 
@@ -245,6 +256,10 @@ export default function SchoolLocationIndex({ location }: Props) {
                             gpsLoading={gpsLoading}
                             onUseCurrentGps={useCurrentGps}
                             onChange={(latitude, longitude) => {
+                                if (!canSaveLocation) {
+                                    return;
+                                }
+
                                 setData((values) => ({
                                     ...values,
                                     latitude,

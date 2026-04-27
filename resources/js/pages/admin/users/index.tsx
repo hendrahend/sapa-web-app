@@ -1,6 +1,35 @@
-import { Head } from '@inertiajs/react';
-import { CheckCircle2, Link2, ShieldAlert, Users } from 'lucide-react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import {
+    CheckCircle2,
+    Link2,
+    Plus,
+    ShieldAlert,
+    UserRoundPlus,
+    Users,
+} from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 type RoleSummary = {
     id: number;
@@ -28,15 +57,49 @@ type UserRow = {
     verified_attendance_records_count: number;
 };
 
+type SchoolClass = {
+    id: number;
+    name: string;
+    grade_level: string | null;
+    academic_year: string | null;
+};
+
 type Props = {
     users: UserRow[];
     roles: RoleSummary[];
+    schoolClasses: SchoolClass[];
     stats: {
         totalUsers: number;
         verifiedUsers: number;
         linkedStudents: number;
         withoutRole: number;
     };
+};
+
+type UserForm = {
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    email_verified: boolean;
+    create_student_profile: boolean;
+    school_class_id: string;
+    nis: string;
+    nisn: string;
+    gender: string;
+};
+
+const emptyForm: UserForm = {
+    name: '',
+    email: '',
+    password: '',
+    role: 'guru',
+    email_verified: true,
+    create_student_profile: false,
+    school_class_id: '',
+    nis: '',
+    nisn: '',
+    gender: '',
 };
 
 const roleLabels: Record<string, string> = {
@@ -77,23 +140,82 @@ function statItems(stats: Props['stats']) {
     ];
 }
 
-export default function AdminUsersIndex({ users, roles, stats }: Props) {
+export default function AdminUsersIndex({
+    users,
+    roles,
+    schoolClasses,
+    stats,
+}: Props) {
+    const { auth } = usePage().props;
+    const canCreateUsers = auth.permissions.includes('users.create');
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const form = useForm<UserForm>(emptyForm);
+    const shouldCreateStudentProfile =
+        form.data.role === 'siswa' && form.data.create_student_profile;
+
+    function resetForm() {
+        form.clearErrors();
+        form.setData(emptyForm);
+        setIsCreateOpen(false);
+    }
+
+    function changeCreateOpen(open: boolean) {
+        setIsCreateOpen(open);
+
+        if (!open) {
+            resetForm();
+        }
+    }
+
+    function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        form.post('/admin/users', {
+            preserveScroll: true,
+            onSuccess: resetForm,
+        });
+    }
+
+    function changeRole(role: string) {
+        form.setData((values) => ({
+            ...values,
+            role,
+            create_student_profile:
+                role === 'siswa' ? values.create_student_profile : false,
+            school_class_id: role === 'siswa' ? values.school_class_id : '',
+            nis: role === 'siswa' ? values.nis : '',
+            nisn: role === 'siswa' ? values.nisn : '',
+            gender: role === 'siswa' ? values.gender : '',
+        }));
+    }
+
     return (
         <>
             <Head title="Pengguna" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        Administrasi
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                        Pengguna
-                    </h1>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                        Pantau akun admin, guru, siswa, dan orang tua yang
-                        sudah masuk ke SAPA.
-                    </p>
+                <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Administrasi
+                        </p>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-normal">
+                            Pengguna
+                        </h1>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                            Pantau dan buat akun admin, guru, siswa, dan orang
+                            tua yang masuk ke SAPA.
+                        </p>
+                    </div>
+                    {canCreateUsers && (
+                        <Button
+                            type="button"
+                            onClick={() => setIsCreateOpen(true)}
+                        >
+                            <Plus />
+                            Tambah pengguna
+                        </Button>
+                    )}
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -114,6 +236,278 @@ export default function AdminUsersIndex({ users, roles, stats }: Props) {
                         </div>
                     ))}
                 </section>
+
+                <Dialog open={isCreateOpen} onOpenChange={changeCreateOpen}>
+                    <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Tambah pengguna</DialogTitle>
+                            <DialogDescription>
+                                Buat akun baru dan tetapkan role awal. Password
+                                kosong akan memakai default password.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={submit} className="grid gap-4">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="name">Nama</Label>
+                                    <Input
+                                        id="name"
+                                        value={form.data.name}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                        required
+                                    />
+                                    <InputError message={form.errors.name} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={form.data.email}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'email',
+                                                event.target.value,
+                                            )
+                                        }
+                                        required
+                                    />
+                                    <InputError message={form.errors.email} />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label>Role</Label>
+                                    <Select
+                                        value={form.data.role}
+                                        onValueChange={changeRole}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Pilih role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {roles.map((role) => (
+                                                <SelectItem
+                                                    key={role.id}
+                                                    value={role.name}
+                                                >
+                                                    {role.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={form.errors.role} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={form.data.password}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'password',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="default: password"
+                                    />
+                                    <InputError
+                                        message={form.errors.password}
+                                    />
+                                </div>
+                            </div>
+
+                            <label className="flex items-center gap-3 text-sm font-medium">
+                                <Checkbox
+                                    checked={form.data.email_verified}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'email_verified',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                Tandai email sudah terverifikasi
+                            </label>
+                            <InputError message={form.errors.email_verified} />
+
+                            {form.data.role === 'siswa' && (
+                                <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                    <label className="flex items-center gap-3 text-sm font-medium">
+                                        <Checkbox
+                                            checked={
+                                                form.data.create_student_profile
+                                            }
+                                            onCheckedChange={(checked) =>
+                                                form.setData(
+                                                    'create_student_profile',
+                                                    checked === true,
+                                                )
+                                            }
+                                        />
+                                        Buat profil siswa sekaligus
+                                    </label>
+                                    <InputError
+                                        message={
+                                            form.errors.create_student_profile
+                                        }
+                                    />
+
+                                    {shouldCreateStudentProfile && (
+                                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <Label>Kelas</Label>
+                                                <Select
+                                                    value={
+                                                        form.data
+                                                            .school_class_id ||
+                                                        'none'
+                                                    }
+                                                    onValueChange={(value) =>
+                                                        form.setData(
+                                                            'school_class_id',
+                                                            value === 'none'
+                                                                ? ''
+                                                                : value,
+                                                        )
+                                                    }
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Pilih kelas" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">
+                                                            Belum ada kelas
+                                                        </SelectItem>
+                                                        {schoolClasses.map(
+                                                            (schoolClass) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        schoolClass.id
+                                                                    }
+                                                                    value={schoolClass.id.toString()}
+                                                                >
+                                                                    {
+                                                                        schoolClass.name
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                                <InputError
+                                                    message={
+                                                        form.errors
+                                                            .school_class_id
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label>Jenis kelamin</Label>
+                                                <Select
+                                                    value={
+                                                        form.data.gender ||
+                                                        'none'
+                                                    }
+                                                    onValueChange={(value) =>
+                                                        form.setData(
+                                                            'gender',
+                                                            value === 'none'
+                                                                ? ''
+                                                                : value,
+                                                        )
+                                                    }
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Pilih gender" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">
+                                                            Belum diisi
+                                                        </SelectItem>
+                                                        <SelectItem value="L">
+                                                            Laki-laki
+                                                        </SelectItem>
+                                                        <SelectItem value="P">
+                                                            Perempuan
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <InputError
+                                                    message={form.errors.gender}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="nis">NIS</Label>
+                                                <Input
+                                                    id="nis"
+                                                    value={form.data.nis}
+                                                    onChange={(event) =>
+                                                        form.setData(
+                                                            'nis',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={form.errors.nis}
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="nisn">
+                                                    NISN
+                                                </Label>
+                                                <Input
+                                                    id="nisn"
+                                                    value={form.data.nisn}
+                                                    onChange={(event) =>
+                                                        form.setData(
+                                                            'nisn',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={form.errors.nisn}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={resetForm}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
+                                    <UserRoundPlus />
+                                    Simpan pengguna
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
 
                 <section className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_1fr]">
                     <div className="h-fit rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
@@ -207,7 +601,8 @@ export default function AdminUsersIndex({ users, roles, stats }: Props) {
                                             </td>
                                             <td className="px-4 py-3 align-top">
                                                 <div className="flex flex-wrap gap-2">
-                                                    {user.roles.length === 0 && (
+                                                    {user.roles.length ===
+                                                        0 && (
                                                         <Badge variant="outline">
                                                             Tanpa role
                                                         </Badge>

@@ -14,7 +14,7 @@ class LmsMaterialRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can(SystemPermission::ManageLms->value) ?? false;
+        return $this->user()?->can(SystemPermission::CreateLms->value) ?? false;
     }
 
     /**

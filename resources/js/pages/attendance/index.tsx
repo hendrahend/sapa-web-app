@@ -242,9 +242,13 @@ export default function AttendanceIndex({
     stats,
 }: Props) {
     const { auth } = usePage().props;
-    const canManageAttendance = auth.permissions.includes('attendance.manage');
+    const canManageAttendance = [
+        'attendance.create',
+        'attendance.update',
+        'attendance.delete',
+    ].some((permission) => auth.permissions.includes(permission));
     const canCheckIn =
-        auth.permissions.includes('attendance.own.view') &&
+        auth.permissions.includes('attendance.own.create') &&
         !canManageAttendance;
     const [cameraActive, setCameraActive] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
@@ -445,7 +449,10 @@ export default function AttendanceIndex({
                 {canManageAttendance && (
                     <section className="grid gap-4 md:grid-cols-3">
                         {statItems(stats).map((item) => (
-                            <div key={item.label} className="sapa-soft-card p-4">
+                            <div
+                                key={item.label}
+                                className="sapa-soft-card p-4"
+                            >
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-sm text-muted-foreground">
                                         {item.label}
@@ -716,7 +723,7 @@ export default function AttendanceIndex({
                     {canManageAttendance && (
                         <div className="grid gap-4">
                             <section className="sapa-card overflow-hidden">
-                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border md:flex-row md:items-center md:justify-between">
+                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">
                                             Hari ini
@@ -867,7 +874,7 @@ export default function AttendanceIndex({
                             </section>
 
                             <section className="sapa-card overflow-hidden">
-                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-sidebar-border">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">
                                             Guru/Admin
@@ -940,7 +947,8 @@ export default function AttendanceIndex({
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                 <RotateCcw className="size-4" />
-                                                {session.records_count ?? 0}{' '}
+                                                {session.records_count ??
+                                                    0}{' '}
                                                 record
                                             </div>
                                         </div>
@@ -965,7 +973,10 @@ export default function AttendanceIndex({
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <form onSubmit={createSession} className="grid gap-4">
+                            <form
+                                onSubmit={createSession}
+                                className="grid gap-4"
+                            >
                                 <div className="grid gap-2 sm:grid-cols-3">
                                     <Button
                                         type="button"
