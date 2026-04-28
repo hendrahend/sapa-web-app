@@ -58,4 +58,8 @@ enum SystemPermission: string
     case CreateNotifications = 'notifications.create';
     case UpdateNotifications = 'notifications.update';
     case DeleteNotifications = 'notifications.delete';
+
+    case ViewRewards = 'rewards.view';
+    case ManageRewards = 'rewards.manage';
+    case RedeemRewards = 'rewards.redeem';
 }

@@ -3,12 +3,14 @@ import {
     Bell,
     BookOpen,
     ClipboardCheck,
+    Gift,
     GraduationCap,
     IdCard,
     LayoutGrid,
     MapPinned,
     School,
     ShieldCheck,
+    Store,
     Users,
 } from 'lucide-react';
 import type { Auth, NavItem } from '@/types';
@@ -42,6 +44,12 @@ const mainNavItems: NavItem[] = [
         href: '/xp',
         icon: Award,
         permissions: ['xp.view'],
+    },
+    {
+        title: 'Toko XP',
+        href: '/rewards',
+        icon: Gift,
+        permissions: ['rewards.view'],
     },
     {
         title: 'Notifikasi',
@@ -81,6 +89,12 @@ const adminNavItems: NavItem[] = [
         href: '/admin/school-location',
         icon: MapPinned,
         permissions: ['school_locations.view'],
+    },
+    {
+        title: 'Kelola Reward',
+        href: '/admin/rewards',
+        icon: Store,
+        permissions: ['rewards.manage'],
     },
 ];
 
