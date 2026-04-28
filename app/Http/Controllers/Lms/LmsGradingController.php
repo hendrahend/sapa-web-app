@@ -30,7 +30,7 @@ class LmsGradingController extends Controller
                 'student:id,name,school_class_id',
                 'student.schoolClass:id,name',
                 'assignment:id,lms_course_id,title,instructions,max_score',
-                'assignment.course:id,name,school_class_id',
+                'assignment.course:id,title,school_class_id',
                 'grader:id,name',
             ])
             ->whereHas('assignment')
@@ -71,7 +71,7 @@ class LmsGradingController extends Controller
                         'title' => $assignment->title,
                         'instructions' => $assignment->instructions,
                         'max_score' => $assignment->max_score,
-                        'course_name' => $assignment->course?->name,
+                        'course_name' => $assignment->course?->title,
                     ] : null,
                 ];
             });
