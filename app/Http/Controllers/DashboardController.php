@@ -147,19 +147,31 @@ class DashboardController extends Controller
      */
     private function progress(): array
     {
+        $start = now()->subDays(6)->startOfDay();
+        $end = now()->endOfDay();
+
+        $attendanceCounts = AttendanceRecord::query()
+            ->selectRaw('date(checked_in_at) as bucket, count(*) as total')
+            ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
+            ->whereBetween('checked_in_at', [$start, $end])
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        $scoreCounts = GradeScore::query()
+            ->selectRaw('date(graded_at) as bucket, count(*) as total')
+            ->whereBetween('graded_at', [$start, $end])
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
         return collect(range(6, 0))
-            ->map(function (int $daysAgo) {
+            ->map(function (int $daysAgo) use ($attendanceCounts, $scoreCounts) {
                 $date = now()->subDays($daysAgo);
+                $key = $date->toDateString();
 
                 return [
                     'label' => $date->translatedFormat('D'),
-                    'attendance' => AttendanceRecord::query()
-                        ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
-                        ->whereDate('checked_in_at', $date->toDateString())
-                        ->count(),
-                    'scores' => GradeScore::query()
-                        ->whereDate('graded_at', $date->toDateString())
-                        ->count(),
+                    'attendance' => (int) ($attendanceCounts[$key] ?? 0),
+                    'scores' => (int) ($scoreCounts[$key] ?? 0),
                 ];
             })
             ->all();

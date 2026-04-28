@@ -1,6 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { Bell, BellOff, CalendarCheck2, GraduationCap } from 'lucide-react';
 import { useMemo } from 'react';
+import { DataTablePagination } from '@/components/sapa/data-table-pagination';
+import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
+import { DataTableToolbar } from '@/components/sapa/data-table-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -39,8 +42,17 @@ type NotificationItem = {
     created_at: string | null;
 };
 
+type Paginated<T> = {
+    data: T[];
+} & PaginationMeta;
+
 type Props = {
-    notifications: NotificationItem[];
+    notifications: Paginated<NotificationItem>;
+    filters: {
+        status: string;
+        kind: string;
+        per_page: number;
+    };
     stats: {
         unread: number;
         total: number;
@@ -66,13 +78,17 @@ function isGrade(d: NotificationItem['data']): d is GradeData {
     return (d as GradeData)?.kind === 'grade.released';
 }
 
-export default function NotificationsIndex({ notifications, stats }: Props) {
+export default function NotificationsIndex({
+    notifications,
+    filters,
+    stats,
+}: Props) {
     const grouped = useMemo(() => {
         const today: NotificationItem[] = [];
         const earlier: NotificationItem[] = [];
         const todayStr = new Date().toDateString();
 
-        for (const n of notifications) {
+        for (const n of notifications.data) {
             if (
                 n.created_at &&
                 new Date(n.created_at).toDateString() === todayStr
@@ -128,29 +144,73 @@ export default function NotificationsIndex({ notifications, stats }: Props) {
                     </div>
                 </section>
 
-                {notifications.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-sidebar-border/70 p-10 text-center text-sm text-muted-foreground">
-                        <BellOff className="mx-auto size-8 text-muted-foreground/60" />
-                        <p className="mt-3">Belum ada notifikasi.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        {grouped.today.length > 0 && (
-                            <NotificationGroup
-                                label="Hari ini"
-                                items={grouped.today}
-                                onMarkRead={markRead}
-                            />
-                        )}
-                        {grouped.earlier.length > 0 && (
-                            <NotificationGroup
-                                label="Sebelumnya"
-                                items={grouped.earlier}
-                                onMarkRead={markRead}
-                            />
-                        )}
-                    </div>
-                )}
+                <div className="overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+                    <DataTableToolbar
+                        path="/notifications"
+                        showSearch={false}
+                        only={['notifications', 'filters', 'stats']}
+                        filters={[
+                            {
+                                name: 'status',
+                                placeholder: 'Semua status',
+                                value: filters.status,
+                                options: [
+                                    {
+                                        value: 'unread',
+                                        label: 'Belum dibaca',
+                                    },
+                                    { value: 'read', label: 'Sudah dibaca' },
+                                ],
+                            },
+                            {
+                                name: 'kind',
+                                placeholder: 'Semua jenis',
+                                value: filters.kind,
+                                options: [
+                                    {
+                                        value: 'attendance.recorded',
+                                        label: 'Absensi',
+                                    },
+                                    {
+                                        value: 'grade.released',
+                                        label: 'Nilai',
+                                    },
+                                ],
+                            },
+                        ]}
+                    />
+
+                    {notifications.data.length === 0 ? (
+                        <div className="p-10 text-center text-sm text-muted-foreground">
+                            <BellOff className="mx-auto size-8 text-muted-foreground/60" />
+                            <p className="mt-3">
+                                Tidak ada notifikasi sesuai filter.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6 p-4">
+                            {grouped.today.length > 0 && (
+                                <NotificationGroup
+                                    label="Hari ini"
+                                    items={grouped.today}
+                                    onMarkRead={markRead}
+                                />
+                            )}
+                            {grouped.earlier.length > 0 && (
+                                <NotificationGroup
+                                    label="Sebelumnya"
+                                    items={grouped.earlier}
+                                    onMarkRead={markRead}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    <DataTablePagination
+                        meta={notifications}
+                        only={['notifications', 'filters', 'stats']}
+                    />
+                </div>
             </div>
         </>
     );

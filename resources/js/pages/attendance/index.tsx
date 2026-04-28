@@ -3,6 +3,7 @@ import {
     Camera,
     CheckCircle2,
     Clock,
+    FileSpreadsheet,
     MapPin,
     Navigation,
     Plus,
@@ -437,13 +438,23 @@ export default function AttendanceIndex({
             <Head title="Absensi" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        Kehadiran siswa
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                        Absensi
-                    </h1>
+                <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Kehadiran siswa
+                        </p>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-normal">
+                            Absensi
+                        </h1>
+                    </div>
+                    {canManageAttendance && (
+                        <Button asChild variant="outline">
+                            <a href="/attendance/export" rel="noopener">
+                                <FileSpreadsheet />
+                                Export Excel
+                            </a>
+                        </Button>
+                    )}
                 </section>
 
                 {canManageAttendance && (

@@ -17,11 +17,19 @@ class NotificationController extends Controller
             abort(403);
         }
 
+        $statusFilter = trim((string) $request->string('status'));
+        $kindFilter = trim((string) $request->string('kind'));
+        $perPage = (int) $request->integer('per_page', 15);
+        $perPage = max(5, min(100, $perPage));
+
         $notifications = $user->notifications()
+            ->when($statusFilter === 'unread', fn ($query) => $query->whereNull('read_at'))
+            ->when($statusFilter === 'read', fn ($query) => $query->whereNotNull('read_at'))
+            ->when($kindFilter !== '', fn ($query) => $query->where('data->kind', $kindFilter))
             ->latest()
-            ->limit(50)
-            ->get()
-            ->map(fn ($n) => [
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn ($n) => [
                 'id' => $n->id,
                 'type' => class_basename($n->type),
                 'kind' => $n->data['kind'] ?? null,
@@ -32,6 +40,11 @@ class NotificationController extends Controller
 
         return Inertia::render('notifications/index', [
             'notifications' => $notifications,
+            'filters' => [
+                'status' => $statusFilter,
+                'kind' => $kindFilter,
+                'per_page' => $perPage,
+            ],
             'stats' => [
                 'unread' => (int) $user->unreadNotifications()->count(),
                 'total' => (int) $user->notifications()->count(),

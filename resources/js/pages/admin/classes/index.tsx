@@ -13,6 +13,10 @@ import {
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
+import { ConfirmDelete } from '@/components/sapa/confirm-delete';
+import { DataTablePagination } from '@/components/sapa/data-table-pagination';
+import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
+import { DataTableToolbar } from '@/components/sapa/data-table-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,8 +58,17 @@ type SchoolClassRow = {
     lms_courses_count: number;
 };
 
+type Paginated<T> = {
+    data: T[];
+} & PaginationMeta;
+
 type Props = {
-    classes: SchoolClassRow[];
+    classes: Paginated<SchoolClassRow>;
+    filters: {
+        search: string;
+        status: string;
+        per_page: number;
+    };
     teachers: TeacherOption[];
     stats: {
         totalClasses: number;
@@ -106,18 +119,25 @@ function statItems(stats: Props['stats']) {
     ];
 }
 
-export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
+export default function AdminClassesIndex({
+    classes,
+    filters,
+    teachers,
+    stats,
+}: Props) {
     const { auth } = usePage().props;
     const canCreateClasses = auth.permissions.includes('classes.create');
     const canUpdateClasses = auth.permissions.includes('classes.update');
+    const canDeleteClasses = auth.permissions.includes('classes.delete');
     const [editingClassId, setEditingClassId] = useState<number | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const form = useForm<SchoolClassForm>(emptyForm);
 
     const editingClass = useMemo(
         () =>
-            classes.find((schoolClass) => schoolClass.id === editingClassId) ??
-            null,
+            classes.data.find(
+                (schoolClass) => schoolClass.id === editingClassId,
+            ) ?? null,
         [classes, editingClassId],
     );
 
@@ -217,7 +237,7 @@ export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
                                 Daftar kelas
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Tambah dan ubah data kelas melalui modal.
+                                {classes.total} kelas terdaftar.
                             </p>
                         </div>
                         {canCreateClasses && (
@@ -227,6 +247,24 @@ export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
                             </Button>
                         )}
                     </div>
+
+                    <DataTableToolbar
+                        path="/admin/classes"
+                        searchValue={filters.search}
+                        searchPlaceholder="Cari nama, tingkat, atau tahun ajaran…"
+                        only={['classes', 'filters']}
+                        filters={[
+                            {
+                                name: 'status',
+                                placeholder: 'Semua status',
+                                value: filters.status,
+                                options: [
+                                    { value: 'active', label: 'Aktif' },
+                                    { value: 'inactive', label: 'Nonaktif' },
+                                ],
+                            },
+                        ]}
+                    />
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
@@ -250,18 +288,18 @@ export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                {classes.length === 0 && (
+                                {classes.data.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={5}
                                             className="px-4 py-6 text-center text-muted-foreground"
                                         >
-                                            Belum ada data kelas.
+                                            Tidak ada kelas sesuai filter.
                                         </td>
                                     </tr>
                                 )}
 
-                                {classes.map((schoolClass) => (
+                                {classes.data.map((schoolClass) => (
                                     <tr key={schoolClass.id}>
                                         <td className="px-4 py-3 align-top">
                                             <p className="font-medium">
@@ -343,25 +381,41 @@ export default function AdminClassesIndex({ classes, teachers, stats }: Props) {
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            {canUpdateClasses && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        editClass(schoolClass)
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </Button>
-                                            )}
+                                            <div className="flex flex-wrap items-center justify-end gap-1">
+                                                {canUpdateClasses && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            editClass(
+                                                                schoolClass,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Pencil />
+                                                        Edit
+                                                    </Button>
+                                                )}
+                                                {canDeleteClasses && (
+                                                    <ConfirmDelete
+                                                        url={`/admin/classes/${schoolClass.id}`}
+                                                        title="Hapus kelas?"
+                                                        description={`Kelas ${schoolClass.name} akan dihapus. Pastikan tidak ada siswa, sesi, atau LMS yang terhubung.`}
+                                                    />
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    <DataTablePagination
+                        meta={classes}
+                        only={['classes', 'filters']}
+                    />
                 </section>
 
                 <Dialog open={isFormOpen} onOpenChange={changeFormOpen}>
