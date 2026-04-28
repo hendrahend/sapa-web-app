@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
+    ArrowRight,
     Award,
     BellRing,
     BookOpenCheck,
@@ -12,6 +13,7 @@ import {
     MessageCircle,
     ShieldCheck,
     Sparkles,
+    Trophy,
     UserRoundCheck,
 } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -21,34 +23,61 @@ type Feature = {
     title: string;
     description: string;
     icon: typeof ClipboardCheck;
+    accent: 'emerald' | 'sky' | 'violet' | 'amber' | 'rose';
 };
 
 const features: Feature[] = [
     {
-        title: 'Absensi',
+        title: 'Absensi GPS + selfie',
         description:
-            'Siswa check-in dengan kamera dan lokasi, guru bisa memantau status hadir, terlambat, dan perlu verifikasi.',
+            'Siswa check-in dari perangkatnya sendiri dengan validasi lokasi dan foto. Guru memantau hadir, terlambat, dan yang perlu diverifikasi secara real-time.',
         icon: ClipboardCheck,
+        accent: 'emerald',
     },
     {
         title: 'Penilaian terpadu',
         description:
-            'Nilai tugas, kuis, praktik, UTS, dan UAS disiapkan agar guru mudah membuat rekap akademik.',
+            'Tugas, kuis, praktik, UTS, dan UAS dirangkum dalam satu rekap akademik. Tidak ada lagi nilai yang tercecer di banyak file.',
         icon: GraduationCap,
+        accent: 'sky',
     },
     {
-        title: 'LMS dengan bantuan AI',
+        title: 'LMS + Asisten AI',
         description:
-            'Materi, tugas, rangkuman, dan feedback pembelajaran disiapkan untuk berkembang dengan asisten AI.',
+            'Materi, tugas, dan diskusi terorganisir per kelas. Asisten AI siap membantu siswa belajar dan guru menyiapkan rangkuman serta umpan balik.',
         icon: BrainCircuit,
+        accent: 'violet',
+    },
+    {
+        title: 'XP & gamifikasi',
+        description:
+            'Setiap kehadiran tepat waktu, tugas selesai, dan nilai bagus memberi XP. Level bar, lencana, dan papan peringkat menjaga motivasi siswa.',
+        icon: Trophy,
+        accent: 'amber',
     },
     {
         title: 'Notifikasi orang tua',
         description:
-            'Orang tua mendapat kabar saat anak hadir, terlambat, atau membutuhkan perhatian sekolah.',
+            'Orang tua langsung mendapat kabar saat anaknya hadir, terlambat, atau menerima nilai baru — lewat inbox di aplikasi.',
         icon: BellRing,
+        accent: 'rose',
+    },
+    {
+        title: 'Manajemen sekolah',
+        description:
+            'Admin mengelola siswa, orang tua, kelas, role, dan lokasi absensi dari satu panel. RBAC bawaan menjaga setiap data tetap di tangan yang tepat.',
+        icon: ShieldCheck,
+        accent: 'emerald',
     },
 ];
+
+const accentMap: Record<Feature['accent'], { bg: string; text: string }> = {
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+    sky: { bg: 'bg-sky-50', text: 'text-sky-700' },
+    violet: { bg: 'bg-violet-50', text: 'text-violet-700' },
+    amber: { bg: 'bg-amber-50', text: 'text-amber-700' },
+    rose: { bg: 'bg-rose-50', text: 'text-rose-700' },
+};
 
 const flows = [
     {
@@ -74,15 +103,39 @@ const flows = [
 ];
 
 const metrics = [
-    { label: 'Modul inti', value: '5' },
+    { label: 'Modul terintegrasi', value: '6' },
     { label: 'Role akses', value: '4' },
-    { label: 'Mode absensi', value: 'GPS' },
+    { label: 'Validasi absensi', value: 'GPS + Selfie' },
 ];
 
 const painPoints = [
-    'Absensi manual sulit dipantau real-time',
-    'Rekap nilai tersebar di banyak file',
-    'Orang tua sering terlambat mendapat kabar',
+    'Absensi manual sulit dipantau real-time dan rawan titip absen.',
+    'Rekap nilai tersebar di banyak file Excel berbeda guru.',
+    'Orang tua sering terlambat tahu saat anaknya tidak masuk sekolah.',
+    'Motivasi belajar siswa sulit diukur dan dihargai secara sistematis.',
+];
+
+const demoAccounts = [
+    {
+        role: 'Admin',
+        email: 'admin@sapa.test',
+        description: 'Akses penuh ke pengelolaan sekolah.',
+    },
+    {
+        role: 'Guru',
+        email: 'guru@sapa.test',
+        description: 'Membuka absensi, menilai, dan menggunakan LMS + AI.',
+    },
+    {
+        role: 'Siswa',
+        email: 'siswa@sapa.test',
+        description: 'Check-in absensi, mengikuti LMS, melihat XP.',
+    },
+    {
+        role: 'Orang tua',
+        email: 'orangtua@sapa.test',
+        description: 'Inbox notifikasi kehadiran dan nilai anak.',
+    },
 ];
 
 function DashboardPreview() {
@@ -126,27 +179,32 @@ function DashboardPreview() {
 
                 <div className="grid gap-4 pt-4 md:grid-cols-[180px_1fr]">
                     <div className="grid gap-3">
-                        {['Dashboard', 'Absensi', 'Nilai', 'LMS'].map(
-                            (item, index) => (
-                                <div
-                                    key={item}
-                                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-xs font-medium ${
+                        {[
+                            'Dashboard',
+                            'Absensi',
+                            'Nilai',
+                            'LMS',
+                            'XP',
+                            'Notifikasi',
+                        ].map((item, index) => (
+                            <div
+                                key={item}
+                                className={`flex items-center gap-3 rounded-md px-3 py-2 text-xs font-medium ${
+                                    index === 1
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : 'bg-slate-50 text-slate-500'
+                                }`}
+                            >
+                                <span
+                                    className={`size-2 rounded-full ${
                                         index === 1
-                                            ? 'bg-emerald-50 text-emerald-700'
-                                            : 'bg-slate-50 text-slate-500'
+                                            ? 'bg-emerald-500'
+                                            : 'bg-slate-300'
                                     }`}
-                                >
-                                    <span
-                                        className={`size-2 rounded-full ${
-                                            index === 1
-                                                ? 'bg-emerald-500'
-                                                : 'bg-slate-300'
-                                        }`}
-                                    />
-                                    {item}
-                                </div>
-                            ),
-                        )}
+                                />
+                                {item}
+                            </div>
+                        ))}
                     </div>
 
                     <div className="grid gap-4">
@@ -259,7 +317,7 @@ export default function Welcome({
 
     return (
         <>
-            <Head title="SAPA - Sistem Absensi & Penilaian">
+            <Head title="SAPA — Sistem Absensi & Penilaian Sekolah">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700"
@@ -268,7 +326,7 @@ export default function Welcome({
             </Head>
 
             <main className="min-h-screen bg-[#f7fffb] text-slate-950">
-                <section className="relative isolate min-h-[720px] overflow-hidden bg-[#dff9ee]">
+                <section className="relative isolate min-h-[760px] overflow-hidden bg-[#dff9ee]">
                     <div className="absolute inset-0 bg-[linear-gradient(#a7f3d033_1px,transparent_1px),linear-gradient(90deg,#93c5fd33_1px,transparent_1px)] bg-[size:56px_56px]" />
                     <motion.div
                         initial={shouldReduceMotion ? false : { opacity: 0 }}
@@ -309,7 +367,7 @@ export default function Welcome({
                     />
                     <DashboardPreview />
 
-                    <div className="relative mx-auto flex min-h-[720px] w-full max-w-7xl flex-col px-6 py-5 lg:px-8">
+                    <div className="relative mx-auto flex min-h-[760px] w-full max-w-7xl flex-col px-6 py-5 lg:px-8">
                         <motion.header
                             initial={
                                 shouldReduceMotion
@@ -339,9 +397,9 @@ export default function Welcome({
                             </Link>
 
                             <nav className="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
-                                <a href="#tentang">Tentang</a>
                                 <a href="#fitur">Fitur</a>
                                 <a href="#alur">Alur</a>
+                                <a href="#demo">Coba demo</a>
                             </nav>
 
                             <div className="flex items-center gap-2">
@@ -397,21 +455,22 @@ export default function Welcome({
                                     className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-white/75 px-3 py-2 text-sm font-semibold text-emerald-800"
                                 >
                                     <Sparkles className="size-4" />
-                                    Platform sekolah digital untuk kompetisi
-                                    inovasi
+                                    Transformasi digital untuk sekolah Indonesia
                                 </motion.div>
 
-                                <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-normal text-slate-950 md:text-7xl">
-                                    SAPA
+                                <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-tight text-slate-950 md:text-7xl">
+                                    Absensi, nilai, dan kabar
+                                    <br />
+                                    <span className="text-emerald-700">
+                                        dalam satu sapaan.
+                                    </span>
                                 </h1>
-                                <p className="mt-5 max-w-2xl text-xl leading-8 font-semibold text-slate-800 md:text-2xl">
-                                    Sistem Absensi & Penilaian
-                                </p>
-                                <p className="mt-5 max-w-xl text-base leading-7 text-slate-700">
-                                    Dirancang untuk membantu sekolah membaca
-                                    kehadiran siswa secara real-time, membuat
-                                    rekap nilai lebih rapi, dan menjaga orang
-                                    tua tetap mendapat kabar penting.
+                                <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700 md:text-xl">
+                                    SAPA menggabungkan absensi GPS, penilaian
+                                    akademik, LMS dengan asisten AI, sistem XP,
+                                    dan notifikasi orang tua — semua dalam satu
+                                    aplikasi yang mudah dipakai siswa, guru, dan
+                                    keluarga.
                                 </p>
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -436,11 +495,13 @@ export default function Welcome({
                                             className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-emerald-700/20 hover:bg-emerald-700"
                                         >
                                             <ClipboardCheck className="size-4" />
-                                            Coba dashboard
+                                            {auth.user
+                                                ? 'Buka dashboard'
+                                                : 'Masuk ke aplikasi'}
                                         </Link>
                                     </motion.div>
                                     <motion.a
-                                        href="#fitur"
+                                        href="#demo"
                                         whileHover={
                                             shouldReduceMotion
                                                 ? undefined
@@ -451,9 +512,10 @@ export default function Welcome({
                                                 ? undefined
                                                 : { scale: 0.98 }
                                         }
-                                        className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white"
+                                        className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-800 hover:bg-white"
                                     >
-                                        Lihat fitur
+                                        Coba akun demo
+                                        <ArrowRight className="size-4" />
                                     </motion.a>
                                 </div>
 
@@ -491,8 +553,8 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="tentang" className="bg-white py-16">
-                    <div className="mx-auto grid max-w-7xl gap-8 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+                <section id="masalah" className="bg-white py-20">
+                    <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
                         <motion.div
                             initial={
                                 shouldReduceMotion
@@ -510,10 +572,16 @@ export default function Welcome({
                             <p className="text-sm font-semibold text-sky-700 uppercase">
                                 Masalah yang diselesaikan
                             </p>
-                            <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
-                                SAPA menyatukan data disiplin, akademik, dan
-                                komunikasi sekolah.
+                            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+                                Disiplin, akademik, dan komunikasi sekolah
+                                seharusnya tidak terpisah.
                             </h2>
+                            <p className="mt-5 text-base leading-7 text-slate-600">
+                                SAPA dirancang untuk menyatukan data yang
+                                biasanya tersebar di buku absensi, file Excel,
+                                dan grup chat — menjadi satu sistem yang
+                                konsisten untuk seluruh keluarga sekolah.
+                            </p>
                         </motion.div>
 
                         <div className="grid gap-3">
@@ -535,12 +603,12 @@ export default function Welcome({
                                         duration: 0.45,
                                         delay: index * 0.08,
                                     }}
-                                    className="flex items-center gap-3 rounded-lg border border-slate-200 bg-[#f7fffb] p-4"
+                                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-[#f7fffb] p-4"
                                 >
-                                    <span className="grid size-9 place-items-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700">
+                                    <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700">
                                         {index + 1}
                                     </span>
-                                    <p className="font-medium text-slate-800">
+                                    <p className="leading-6 font-medium text-slate-800">
                                         {item}
                                     </p>
                                 </motion.div>
@@ -549,7 +617,7 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="fitur" className="bg-white py-20">
+                <section id="fitur" className="bg-[#f7fffb] py-20">
                     <div className="mx-auto max-w-7xl px-6 lg:px-8">
                         <motion.div
                             initial={
@@ -569,49 +637,61 @@ export default function Welcome({
                             <p className="text-sm font-semibold text-emerald-700 uppercase">
                                 Fitur utama
                             </p>
-                            <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
-                                Bukan sekadar absensi, tapi ekosistem sekolah
-                                yang saling terhubung.
+                            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+                                Bukan sekadar absensi — ekosistem sekolah yang
+                                saling terhubung.
                             </h2>
+                            <p className="mt-5 text-base leading-7 text-slate-600">
+                                Enam modul yang bekerja sama: absensi memberi
+                                XP, nilai memicu notifikasi, LMS terhubung
+                                dengan asisten AI. Sekali setup, satu sumber
+                                kebenaran untuk seluruh sekolah.
+                            </p>
                         </motion.div>
 
-                        <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                            {features.map((feature, index) => (
-                                <motion.article
-                                    key={feature.title}
-                                    initial={
-                                        shouldReduceMotion
-                                            ? false
-                                            : { opacity: 0, y: 28 }
-                                    }
-                                    whileInView={
-                                        shouldReduceMotion
-                                            ? undefined
-                                            : { opacity: 1, y: 0 }
-                                    }
-                                    viewport={{ once: true, amount: 0.25 }}
-                                    transition={{
-                                        duration: 0.45,
-                                        delay: index * 0.06,
-                                    }}
-                                    whileHover={
-                                        shouldReduceMotion
-                                            ? undefined
-                                            : { y: -6, scale: 1.01 }
-                                    }
-                                    className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
-                                >
-                                    <div className="grid size-11 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-                                        <feature.icon className="size-5" />
-                                    </div>
-                                    <h3 className="mt-5 text-lg font-semibold text-slate-950">
-                                        {feature.title}
-                                    </h3>
-                                    <p className="mt-3 text-sm leading-6 text-slate-600">
-                                        {feature.description}
-                                    </p>
-                                </motion.article>
-                            ))}
+                        <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {features.map((feature, index) => {
+                                const accent = accentMap[feature.accent];
+
+                                return (
+                                    <motion.article
+                                        key={feature.title}
+                                        initial={
+                                            shouldReduceMotion
+                                                ? false
+                                                : { opacity: 0, y: 28 }
+                                        }
+                                        whileInView={
+                                            shouldReduceMotion
+                                                ? undefined
+                                                : { opacity: 1, y: 0 }
+                                        }
+                                        viewport={{ once: true, amount: 0.25 }}
+                                        transition={{
+                                            duration: 0.45,
+                                            delay: index * 0.06,
+                                        }}
+                                        whileHover={
+                                            shouldReduceMotion
+                                                ? undefined
+                                                : { y: -6, scale: 1.01 }
+                                        }
+                                        className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+                                    >
+                                        <div
+                                            className={`grid size-11 place-items-center rounded-lg ${accent.bg} ${accent.text}`}
+                                        >
+                                            <feature.icon className="size-5" />
+                                        </div>
+                                        <h3 className="mt-5 text-lg font-semibold text-slate-950">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="mt-3 text-sm leading-6 text-slate-600">
+                                            {feature.description}
+                                        </p>
+                                    </motion.article>
+                                );
+                            })}
                         </div>
                     </div>
                 </section>
@@ -635,14 +715,14 @@ export default function Welcome({
                             <p className="text-sm font-semibold text-sky-700 uppercase">
                                 Alur pengguna
                             </p>
-                            <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
+                            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
                                 Setiap role punya ruang kerja yang jelas.
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
-                                SAPA dibuat agar admin, guru, siswa, dan orang
-                                tua tidak bercampur dalam satu tampilan yang
-                                membingungkan. Hak akses mengikuti kebutuhan
-                                masing-masing.
+                                Admin, guru, siswa, dan orang tua memakai
+                                aplikasi yang sama — tetapi melihat menu, data,
+                                dan aksi yang sesuai perannya. Hak akses dijaga
+                                oleh sistem RBAC bawaan.
                             </p>
                         </motion.div>
 
@@ -689,8 +769,8 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="lomba" className="bg-slate-950 py-20 text-white">
-                    <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_420px] lg:px-8">
+                <section id="demo" className="bg-slate-950 py-20 text-white">
+                    <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_440px] lg:px-8">
                         <motion.div
                             initial={
                                 shouldReduceMotion
@@ -706,34 +786,47 @@ export default function Welcome({
                             transition={{ duration: 0.55 }}
                         >
                             <p className="text-sm font-semibold text-emerald-300 uppercase">
-                                Nilai lomba
+                                Coba sekarang
                             </p>
-                            <h2 className="mt-3 text-3xl font-bold tracking-normal md:text-4xl">
-                                Cerita produknya kuat: disiplin, akademik, dan
-                                komunikasi keluarga dalam satu data.
+                            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+                                Empat akun demo, empat sudut pandang.
                             </h2>
-                            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
-                                SAPA bisa dipresentasikan sebagai solusi yang
-                                dekat dengan masalah sekolah: absensi manual,
-                                rekap nilai tercecer, orang tua terlambat tahu,
-                                dan motivasi belajar yang belum terukur.
+                            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
+                                Login dengan salah satu akun di samping untuk
+                                merasakan SAPA dari sisi admin, guru, siswa,
+                                atau orang tua. Semua akun memakai password{' '}
+                                <code className="rounded bg-white/10 px-2 py-0.5 text-emerald-200">
+                                    password
+                                </code>
+                                .
                             </p>
 
-                            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                            <div className="mt-8 grid gap-3 sm:grid-cols-2">
                                 {[
-                                    'Siap demo absensi',
-                                    'Data siswa-orang tua',
-                                    'Pondasi LMS + AI',
+                                    'Data 30 siswa demo siap pakai',
+                                    'Riwayat absensi 7 hari',
+                                    'Tugas LMS dengan submisi nyata',
+                                    'XP & notifikasi terisi otomatis',
                                 ].map((item) => (
                                     <div
                                         key={item}
                                         className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm font-medium"
                                     >
-                                        <CheckCircle2 className="size-4 text-emerald-300" />
+                                        <CheckCircle2 className="size-4 shrink-0 text-emerald-300" />
                                         {item}
                                     </div>
                                 ))}
                             </div>
+
+                            <Link
+                                href={auth.user ? dashboard() : login()}
+                                className="mt-8 inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-5 py-3 text-sm font-semibold text-emerald-950 shadow-lg shadow-emerald-900/30 hover:bg-emerald-400"
+                            >
+                                {auth.user
+                                    ? 'Buka dashboard'
+                                    : 'Masuk dengan akun demo'}
+                                <ArrowRight className="size-4" />
+                            </Link>
                         </motion.div>
 
                         <motion.div
@@ -749,49 +842,43 @@ export default function Welcome({
                             }
                             viewport={{ once: true, amount: 0.35 }}
                             transition={{ duration: 0.55, delay: 0.12 }}
-                            whileHover={
-                                shouldReduceMotion
-                                    ? undefined
-                                    : { y: -6, rotate: -1 }
-                            }
-                            className="rounded-lg border border-white/10 bg-white/5 p-5"
+                            className="rounded-xl border border-white/10 bg-white/5 p-5"
                         >
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-slate-300">
-                                        XP siswa
-                                    </p>
-                                    <p className="mt-1 text-2xl font-semibold">
-                                        1.280 poin
-                                    </p>
-                                </div>
-                                <Award className="size-10 text-emerald-300" />
+                            <div className="mb-4 flex items-center gap-2 text-xs font-semibold tracking-wide text-emerald-200 uppercase">
+                                <Award className="size-4" />
+                                Akun demo
                             </div>
-
-                            <div className="mt-6 grid gap-3">
-                                {[
-                                    ['Hadir tepat waktu', '+20 XP'],
-                                    ['Tugas LMS selesai', '+35 XP'],
-                                    ['Nilai di atas KKM', '+50 XP'],
-                                ].map(([label, value]) => (
+                            <div className="grid gap-3">
+                                {demoAccounts.map((account) => (
                                     <div
-                                        key={label}
-                                        className="flex items-center justify-between rounded-md bg-white/8 px-3 py-3 text-sm"
+                                        key={account.email}
+                                        className="rounded-lg border border-white/10 bg-white/5 p-4 transition hover:border-emerald-300/40 hover:bg-white/10"
                                     >
-                                        <span className="text-slate-200">
-                                            {label}
-                                        </span>
-                                        <span className="font-semibold text-emerald-300">
-                                            {value}
-                                        </span>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-white">
+                                                {account.role}
+                                            </p>
+                                            <code className="rounded bg-white/10 px-2 py-0.5 font-mono text-xs text-emerald-200">
+                                                {account.email}
+                                            </code>
+                                        </div>
+                                        <p className="mt-2 text-xs leading-5 text-slate-300">
+                                            {account.description}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
+                            <p className="mt-4 text-xs text-slate-400">
+                                Password untuk semua akun:{' '}
+                                <code className="rounded bg-white/10 px-2 py-0.5 text-emerald-200">
+                                    password
+                                </code>
+                            </p>
                         </motion.div>
                     </div>
                 </section>
 
-                <section className="bg-white px-6 py-16">
+                <section className="bg-white px-6 py-20">
                     <motion.div
                         initial={
                             shouldReduceMotion ? false : { opacity: 0, y: 24 }
@@ -803,27 +890,47 @@ export default function Welcome({
                         }
                         viewport={{ once: true, amount: 0.35 }}
                         transition={{ duration: 0.55 }}
-                        className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-6 rounded-lg border border-emerald-100 bg-[#e9fff7] p-6 md:flex-row md:items-center lg:p-8"
+                        className="relative mx-auto flex max-w-5xl flex-col items-start justify-between gap-6 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-[#e9fff7] to-sky-50 p-8 md:flex-row md:items-center lg:p-10"
                     >
-                        <div>
-                            <h2 className="text-2xl font-bold tracking-normal text-slate-950">
-                                Mulai dari data siswa, lanjut ke penilaian dan
-                                LMS.
+                        <div className="absolute -top-10 -right-10 size-48 rounded-full bg-emerald-200/40 blur-3xl" />
+                        <div className="absolute -bottom-12 -left-12 size-48 rounded-full bg-sky-200/40 blur-3xl" />
+                        <div className="relative max-w-2xl">
+                            <h2 className="text-2xl font-bold tracking-tight text-slate-950 md:text-3xl">
+                                Siap menjadi sapaan digital sekolahmu.
                             </h2>
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
-                                Pondasi SAPA sudah mengarah ke sistem lengkap
-                                untuk absensi, akademik, dan komunikasi orang
-                                tua.
+                            <p className="mt-3 text-sm leading-6 text-slate-600 md:text-base">
+                                Mulai dari satu kelas hari ini — SAPA tumbuh
+                                bersama sekolah, dari absensi, ke penilaian,
+                                LMS, sampai komunikasi orang tua.
                             </p>
                         </div>
                         <Link
                             href={auth.user ? dashboard() : login()}
-                            className="inline-flex shrink-0 items-center justify-center rounded-md bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-700/20 hover:bg-sky-700"
+                            className="relative inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 hover:bg-slate-800"
                         >
-                            Buka aplikasi
+                            {auth.user ? 'Buka dashboard' : 'Mulai sekarang'}
+                            <ArrowRight className="size-4" />
                         </Link>
                     </motion.div>
                 </section>
+
+                <footer className="border-t border-slate-200 bg-white py-8">
+                    <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 text-sm text-slate-500 sm:flex-row lg:px-8">
+                        <div className="flex items-center gap-2">
+                            <span className="grid size-7 place-items-center rounded-md bg-emerald-600 text-white">
+                                <AppLogoIcon className="size-4 fill-current" />
+                            </span>
+                            <span className="font-semibold text-slate-700">
+                                SAPA
+                            </span>
+                            <span>— Sistem Absensi & Penilaian</span>
+                        </div>
+                        <p>
+                            Dibuat untuk transformasi digital pendidikan
+                            Indonesia.
+                        </p>
+                    </div>
+                </footer>
             </main>
         </>
     );
