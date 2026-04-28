@@ -330,6 +330,15 @@ function InsightCard({
     );
 }
 
+ClassInsightsIndex.layout = {
+    breadcrumbs: [
+        {
+            title: 'Insight Kelas',
+            href: '/class-insights',
+        },
+    ],
+};
+
 function Stat({
     icon: Icon,
     label,

@@ -237,15 +237,17 @@ JSON
     private function notifyTeachers(SchoolClass $class, ClassInsight $insight): void
     {
         $teachers = User::query()
-            ->where(fn ($q) => $q->where('id', $class->homeroom_teacher_id))
-            ->orWhereHas(
-                'lmsCourses',
-                fn ($q) => $q->where('school_class_id', $class->id),
-            )
-            ->orWhereHas(
-                'gradeAssessments',
-                fn ($q) => $q->where('school_class_id', $class->id),
-            )
+            ->where(function ($q) use ($class) {
+                $q->where('id', $class->homeroom_teacher_id)
+                    ->orWhereHas(
+                        'lmsCourses',
+                        fn ($sub) => $sub->where('school_class_id', $class->id),
+                    )
+                    ->orWhereHas(
+                        'gradeAssessments',
+                        fn ($sub) => $sub->where('school_class_id', $class->id),
+                    );
+            })
             ->get()
             ->unique('id');
 
