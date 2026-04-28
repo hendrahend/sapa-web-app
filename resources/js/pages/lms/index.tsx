@@ -11,7 +11,7 @@ import {
     Send,
     Sparkles,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -225,6 +225,47 @@ export default function LmsIndex({
     const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([]);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Hydrate AI chat history from server (per-user, persisted in DB).
+        let cancelled = false;
+        fetch('/lms/ai/chat', {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then((res) => (res.ok ? res.json() : { messages: [] }))
+            .then(
+                (payload: {
+                    messages?: { role: string; content: string }[];
+                }) => {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    const items = payload.messages ?? [];
+
+                    if (items.length > 0) {
+                        setAiMessages(
+                            items.map((m) => ({
+                                role:
+                                    m.role === 'assistant'
+                                        ? 'assistant'
+                                        : 'user',
+                                content: m.content,
+                            })),
+                        );
+                    }
+                },
+            )
+            .catch(() => {
+                /* silently ignore — chat just starts empty */
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const courseForm = useForm<CourseForm>({
         subject_id: subjects[0]?.id.toString() ?? '',

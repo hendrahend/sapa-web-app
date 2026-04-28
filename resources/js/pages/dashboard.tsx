@@ -140,7 +140,8 @@ function progressPath(points: ProgressPoint[], key: 'attendance' | 'scores') {
 
     return points
         .map((point, index) => {
-            const x = points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
+            const x =
+                points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
             const y = 92 - (point[key] / max) * 72;
 
             return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
@@ -183,7 +184,10 @@ export default function Dashboard({
     const { auth } = usePage().props;
     const xpProgress =
         overview.xpToNextLevel > 0
-            ? Math.min(100, Math.round((overview.xp / overview.xpToNextLevel) * 100))
+            ? Math.min(
+                  100,
+                  Math.round((overview.xp / overview.xpToNextLevel) * 100),
+              )
             : 0;
     const attendancePath = progressPath(progress, 'attendance');
     const scorePath = progressPath(progress, 'scores');
@@ -353,13 +357,14 @@ export default function Dashboard({
                             <div className="mt-5 grid gap-5 md:grid-cols-[1fr_250px] md:items-center">
                                 <div>
                                     <p className="text-2xl font-bold text-foreground">
-                                        Disapa: {formatTime(attendance.checkedInAt)}
+                                        Disapa:{' '}
+                                        {formatTime(attendance.checkedInAt)}
                                     </p>
                                     <p
                                         className={`mt-1 text-base font-semibold ${
                                             attendance.status === 'terlambat'
                                                 ? 'text-amber-600'
-                                            : attendance.status
+                                                : attendance.status
                                                   ? 'text-emerald-600'
                                                   : 'text-muted-foreground'
                                         }`}
@@ -413,8 +418,8 @@ export default function Dashboard({
                                             Drop your Essay
                                         </p>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            AI feedback akan memakai data LMS dan
-                                            nilai siswa.
+                                            AI feedback akan memakai data LMS
+                                            dan nilai siswa.
                                         </p>
                                         <Link
                                             href="/lms"

@@ -153,8 +153,16 @@
     .sapa-page {
         @apply min-h-full bg-background;
         background-image:
-            radial-gradient(circle at 20% 0%, color-mix(in oklch, var(--primary) 18%, transparent) 0, transparent 26rem),
-            radial-gradient(circle at 92% 12%, color-mix(in oklch, var(--ring) 20%, transparent) 0, transparent 24rem);
+            radial-gradient(
+                circle at 20% 0%,
+                color-mix(in oklch, var(--primary) 18%, transparent) 0,
+                transparent 26rem
+            ),
+            radial-gradient(
+                circle at 92% 12%,
+                color-mix(in oklch, var(--ring) 20%, transparent) 0,
+                transparent 24rem
+            );
     }
 
     .sapa-card {

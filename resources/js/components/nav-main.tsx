@@ -36,6 +36,14 @@ export function NavMain({
                             <Link href={item.href} prefetch>
                                 {item.icon && <item.icon />}
                                 <span>{item.title}</span>
+                                {item.badge != null && item.badge !== '' && (
+                                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">
+                                        {typeof item.badge === 'number' &&
+                                        item.badge > 99
+                                            ? '99+'
+                                            : item.badge}
+                                    </span>
+                                )}
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
