@@ -18,6 +18,7 @@ use App\Http\Controllers\Lms\LmsAiChatController;
 use App\Http\Controllers\Lms\LmsAssignmentController;
 use App\Http\Controllers\Lms\LmsController;
 use App\Http\Controllers\Lms\LmsCourseController;
+use App\Http\Controllers\Lms\LmsGradingController;
 use App\Http\Controllers\Lms\LmsMaterialController;
 use App\Http\Controllers\Lms\LmsSubmissionController;
 use App\Http\Controllers\NotificationController;
@@ -76,6 +77,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['index', 'store'])
         ->names('lms.ai.chat')
         ->middleware('permission:lms.view');
+
+    Route::get('lms/grading', [LmsGradingController::class, 'index'])
+        ->middleware('permission:lms.create')
+        ->name('lms.grading.index');
+
+    Route::post('lms/grading/{submission}/ai', [LmsGradingController::class, 'aiGrade'])
+        ->middleware('permission:lms.create')
+        ->name('lms.grading.ai');
+
+    Route::patch('lms/grading/{submission}', [LmsGradingController::class, 'update'])
+        ->middleware('permission:lms.create')
+        ->name('lms.grading.update');
 
     Route::resource('lms/courses', LmsCourseController::class)
         ->only('store')

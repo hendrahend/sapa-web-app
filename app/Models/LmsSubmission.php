@@ -6,7 +6,18 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['lms_assignment_id', 'student_id', 'graded_by_id', 'content', 'submitted_at', 'score', 'feedback', 'graded_at'])]
+#[Fillable([
+    'lms_assignment_id',
+    'student_id',
+    'graded_by_id',
+    'content',
+    'submitted_at',
+    'score',
+    'feedback',
+    'graded_at',
+    'ai_grade_data',
+    'ai_graded_at',
+])]
 class LmsSubmission extends Model
 {
     /**
@@ -20,6 +31,8 @@ class LmsSubmission extends Model
             'submitted_at' => 'datetime',
             'score' => 'decimal:2',
             'graded_at' => 'datetime',
+            'ai_grade_data' => 'array',
+            'ai_graded_at' => 'datetime',
         ];
     }
 

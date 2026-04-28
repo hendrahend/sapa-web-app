@@ -2,6 +2,7 @@ import {
     Award,
     Bell,
     BookOpen,
+    BookOpenCheck,
     ClipboardCheck,
     Gift,
     GraduationCap,
@@ -38,6 +39,12 @@ const mainNavItems: NavItem[] = [
         href: '/lms',
         icon: BookOpen,
         permissions: ['lms.view'],
+    },
+    {
+        title: 'Penilaian LMS',
+        href: '/lms/grading',
+        icon: BookOpenCheck,
+        permissions: ['lms.create'],
     },
     {
         title: 'XP',
