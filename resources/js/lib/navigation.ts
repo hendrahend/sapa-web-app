@@ -1,6 +1,7 @@
 import {
     Award,
     Bell,
+    BarChart3,
     BookOpen,
     BookOpenCheck,
     ClipboardCheck,
@@ -52,6 +53,12 @@ const mainNavItems: NavItem[] = [
         href: '/lms/grading',
         icon: BookOpenCheck,
         permissions: ['lms.create'],
+    },
+    {
+        title: 'Insight Kelas',
+        href: '/class-insights',
+        icon: BarChart3,
+        permissions: ['grades.view'],
     },
     {
         title: 'XP',

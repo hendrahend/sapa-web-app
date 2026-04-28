@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Attendance\AttendanceCheckInController;
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Attendance\AttendanceSessionController;
+use App\Http\Controllers\ClassInsightController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Exports\AttendanceExportController;
 use App\Http\Controllers\Exports\GradeExportController;
@@ -73,6 +74,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('lms', [LmsController::class, 'index'])
         ->middleware('permission:lms.view')
         ->name('lms.index');
+
+    Route::get('class-insights', [ClassInsightController::class, 'index'])
+        ->middleware('permission:grades.view')
+        ->name('class-insights.index');
+
+    Route::post('class-insights', [ClassInsightController::class, 'store'])
+        ->middleware('permission:grades.create|grades.update')
+        ->name('class-insights.store');
 
     Route::resource('lms/ai/chat', LmsAiChatController::class)
         ->only(['index', 'store'])
