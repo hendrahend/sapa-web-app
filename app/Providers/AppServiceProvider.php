@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\AttendanceRecord;
+use App\Models\GradeScore;
+use App\Models\LmsSubmission;
+use App\Observers\AttendanceRecordObserver;
+use App\Observers\GradeScoreObserver;
+use App\Observers\LmsSubmissionObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerObservers();
+    }
+
+    protected function registerObservers(): void
+    {
+        AttendanceRecord::observe(AttendanceRecordObserver::class);
+        GradeScore::observe(GradeScoreObserver::class);
+        LmsSubmission::observe(LmsSubmissionObserver::class);
     }
 
     /**

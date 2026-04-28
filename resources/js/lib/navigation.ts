@@ -99,7 +99,17 @@ function canAccessItem(item: NavItem, auth: Auth): boolean {
 }
 
 export function getMainNavItems(auth: Auth): NavItem[] {
-    return mainNavItems.filter((item) => canAccessItem(item, auth));
+    return mainNavItems
+        .filter((item) => canAccessItem(item, auth))
+        .map((item) => {
+            if (item.title === 'Notifikasi') {
+                const unread = auth.unreadNotifications ?? 0;
+
+                return { ...item, badge: unread > 0 ? unread : null };
+            }
+
+            return item;
+        });
 }
 
 export function getAdminNavItems(auth: Auth): NavItem[] {

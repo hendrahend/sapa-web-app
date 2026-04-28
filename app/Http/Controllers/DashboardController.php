@@ -12,6 +12,7 @@ use App\Models\LmsCourse;
 use App\Models\LmsMaterial;
 use App\Models\LmsSubmission;
 use App\Models\Student;
+use App\Services\Xp\XpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -19,21 +20,34 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly XpService $xp) {}
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
         $student = $user?->student()->with('schoolClass:id,name')->first();
 
+        $progress = $student
+            ? $this->xp->progressFor($student)
+            : ['xp' => 0, 'level' => 1, 'level_size' => $this->xp->levelThreshold(), 'percent' => 0];
+
         return Inertia::render('dashboard', [
             'overview' => [
                 'weeklyGoal' => $this->weeklyGoal($student),
-                'level' => $this->level($student),
-                'xp' => $this->xp($student),
-                'xpToNextLevel' => 160,
+                'level' => $progress['level'],
+                'xp' => $progress['xp'],
+                'xpToNextLevel' => (int) $progress['level_size'],
             ],
             'attendance' => $this->attendance($student),
             'assessment' => $this->assessment($student),
-            'leaderboard' => $this->leaderboard(),
+            'leaderboard' => $this->xp->leaderboard(5)
+                ->map(fn (array $row) => [
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'className' => $row['class_name'],
+                    'xp' => $row['xp'],
+                ])
+                ->all(),
             'progress' => $this->progress(),
             'lms' => $this->lms($student),
             'stats' => [
@@ -66,34 +80,6 @@ class DashboardController extends Controller
             ->count();
 
         return (int) min(100, round(($total / 5) * 100));
-    }
-
-    private function xp(?Student $student): int
-    {
-        $attendanceQuery = AttendanceRecord::query();
-        $scoreQuery = GradeScore::query();
-
-        if ($student) {
-            $attendanceQuery->where('student_id', $student->id);
-            $scoreQuery->where('student_id', $student->id);
-        }
-
-        $presentXp = (clone $attendanceQuery)
-            ->where('status', AttendanceStatus::Present->value)
-            ->count() * 20;
-        $lateXp = (clone $attendanceQuery)
-            ->where('status', AttendanceStatus::Late->value)
-            ->count() * 10;
-        $scoreXp = (clone $scoreQuery)
-            ->where('score', '>=', 75)
-            ->count() * 30;
-
-        return $presentXp + $lateXp + $scoreXp;
-    }
-
-    private function level(?Student $student): int
-    {
-        return max(1, (int) floor($this->xp($student) / 160) + 1);
     }
 
     /**
@@ -154,33 +140,6 @@ class DashboardController extends Controller
             'skill' => $score && $score->score >= 85 ? 'Tinggi' : ($score ? 'Berkembang' : 'Belum ada'),
             'feedback' => $score?->feedback,
         ];
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function leaderboard(): array
-    {
-        return Student::query()
-            ->where('is_active', true)
-            ->with('schoolClass:id,name')
-            ->withCount([
-                'attendanceRecords as present_count' => fn ($query) => $query->where('status', AttendanceStatus::Present->value),
-                'attendanceRecords as late_count' => fn ($query) => $query->where('status', AttendanceStatus::Late->value),
-                'gradeScores as strong_scores_count' => fn ($query) => $query->where('score', '>=', 75),
-            ])
-            ->limit(8)
-            ->get()
-            ->map(fn (Student $student) => [
-                'id' => $student->id,
-                'name' => $student->name,
-                'className' => $student->schoolClass?->name,
-                'xp' => ($student->present_count * 20) + ($student->late_count * 10) + ($student->strong_scores_count * 30),
-            ])
-            ->sortByDesc('xp')
-            ->values()
-            ->take(5)
-            ->all();
     }
 
     /**

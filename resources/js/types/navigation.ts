@@ -13,4 +13,5 @@ export type NavItem = {
     isActive?: boolean;
     permissions?: string[];
     roles?: string[];
+    badge?: number | string | null;
 };

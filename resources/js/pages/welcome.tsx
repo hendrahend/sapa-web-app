@@ -272,7 +272,9 @@ export default function Welcome({
                     <div className="absolute inset-0 bg-[linear-gradient(#a7f3d033_1px,transparent_1px),linear-gradient(90deg,#93c5fd33_1px,transparent_1px)] bg-[size:56px_56px]" />
                     <motion.div
                         initial={shouldReduceMotion ? false : { opacity: 0 }}
-                        animate={shouldReduceMotion ? undefined : { opacity: 1 }}
+                        animate={
+                            shouldReduceMotion ? undefined : { opacity: 1 }
+                        }
                         transition={{ duration: 0.8 }}
                         className="absolute right-0 bottom-0 h-[78%] w-[72%] bg-[#bfe8ff]"
                     />
@@ -293,7 +295,10 @@ export default function Welcome({
                         animate={
                             shouldReduceMotion
                                 ? undefined
-                                : { scale: [1, 1.08, 1], opacity: [0.35, 0.5, 0.35] }
+                                : {
+                                      scale: [1, 1.08, 1],
+                                      opacity: [0.35, 0.5, 0.35],
+                                  }
                         }
                         transition={{
                             duration: 5,
@@ -396,10 +401,10 @@ export default function Welcome({
                                     inovasi
                                 </motion.div>
 
-                                <h1 className="mt-7 max-w-2xl text-5xl font-bold leading-[1.05] tracking-normal text-slate-950 md:text-7xl">
+                                <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-normal text-slate-950 md:text-7xl">
                                     SAPA
                                 </h1>
-                                <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-slate-800 md:text-2xl">
+                                <p className="mt-5 max-w-2xl text-xl leading-8 font-semibold text-slate-800 md:text-2xl">
                                     Sistem Absensi & Penilaian
                                 </p>
                                 <p className="mt-5 max-w-xl text-base leading-7 text-slate-700">
@@ -502,7 +507,7 @@ export default function Welcome({
                             viewport={{ once: true, amount: 0.35 }}
                             transition={{ duration: 0.55 }}
                         >
-                            <p className="text-sm font-semibold uppercase text-sky-700">
+                            <p className="text-sm font-semibold text-sky-700 uppercase">
                                 Masalah yang diselesaikan
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
@@ -561,7 +566,7 @@ export default function Welcome({
                             transition={{ duration: 0.55 }}
                             className="max-w-3xl"
                         >
-                            <p className="text-sm font-semibold uppercase text-emerald-700">
+                            <p className="text-sm font-semibold text-emerald-700 uppercase">
                                 Fitur utama
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
@@ -627,7 +632,7 @@ export default function Welcome({
                             viewport={{ once: true, amount: 0.35 }}
                             transition={{ duration: 0.55 }}
                         >
-                            <p className="text-sm font-semibold uppercase text-sky-700">
+                            <p className="text-sm font-semibold text-sky-700 uppercase">
                                 Alur pengguna
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-normal text-slate-950 md:text-4xl">
@@ -700,7 +705,7 @@ export default function Welcome({
                             viewport={{ once: true, amount: 0.35 }}
                             transition={{ duration: 0.55 }}
                         >
-                            <p className="text-sm font-semibold uppercase text-emerald-300">
+                            <p className="text-sm font-semibold text-emerald-300 uppercase">
                                 Nilai lomba
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-normal md:text-4xl">
@@ -789,9 +794,7 @@ export default function Welcome({
                 <section className="bg-white px-6 py-16">
                     <motion.div
                         initial={
-                            shouldReduceMotion
-                                ? false
-                                : { opacity: 0, y: 24 }
+                            shouldReduceMotion ? false : { opacity: 0, y: 24 }
                         }
                         whileInView={
                             shouldReduceMotion
