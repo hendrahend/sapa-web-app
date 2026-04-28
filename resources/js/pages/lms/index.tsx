@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     ClipboardList,
     FileText,
+    GraduationCap,
     LibraryBig,
     Plus,
     Send,
@@ -14,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
+import { EmptyState } from '@/components/sapa/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -754,8 +756,12 @@ export default function LmsIndex({
 
                     <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
                         {filteredCourses.length === 0 && (
-                            <div className="text-sm text-muted-foreground">
-                                Belum ada course LMS.
+                            <div className="md:col-span-2 xl:col-span-3">
+                                <EmptyState
+                                    icon={GraduationCap}
+                                    title="Belum ada course LMS"
+                                    description="Buat course baru untuk mulai membagikan materi dan tugas ke kelas."
+                                />
                             </div>
                         )}
 

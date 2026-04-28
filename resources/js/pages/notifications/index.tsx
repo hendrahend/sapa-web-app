@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { DataTablePagination } from '@/components/sapa/data-table-pagination';
 import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
 import { DataTableToolbar } from '@/components/sapa/data-table-toolbar';
+import { EmptyState } from '@/components/sapa/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -181,11 +182,12 @@ export default function NotificationsIndex({
                     />
 
                     {notifications.data.length === 0 ? (
-                        <div className="p-10 text-center text-sm text-muted-foreground">
-                            <BellOff className="mx-auto size-8 text-muted-foreground/60" />
-                            <p className="mt-3">
-                                Tidak ada notifikasi sesuai filter.
-                            </p>
+                        <div className="p-6">
+                            <EmptyState
+                                icon={BellOff}
+                                title="Belum ada notifikasi"
+                                description="Notifikasi absensi & nilai akan muncul di sini ketika kegiatan baru tercatat."
+                            />
                         </div>
                     ) : (
                         <div className="space-y-6 p-4">
