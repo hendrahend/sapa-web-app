@@ -54,6 +54,8 @@ class RoleAndPermissionSeeder extends Seeder
             SystemPermission::ViewNotifications->value,
             SystemPermission::CreateNotifications->value,
             SystemPermission::UpdateNotifications->value,
+            SystemPermission::ViewRewards->value,
+            SystemPermission::ManageRewards->value,
         ]);
 
         $student->syncPermissions([
@@ -64,6 +66,8 @@ class RoleAndPermissionSeeder extends Seeder
             SystemPermission::SubmitLmsAssignments->value,
             SystemPermission::ViewXp->value,
             SystemPermission::ViewNotifications->value,
+            SystemPermission::ViewRewards->value,
+            SystemPermission::RedeemRewards->value,
         ]);
 
         $parent->syncPermissions([

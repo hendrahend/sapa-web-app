@@ -21,6 +21,7 @@ use App\Http\Controllers\Lms\LmsCourseController;
 use App\Http\Controllers\Lms\LmsMaterialController;
 use App\Http\Controllers\Lms\LmsSubmissionController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Rewards\RewardController;
 use App\Http\Controllers\XpController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -149,6 +150,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->names('admin.school-location')
         ->middlewareFor('index', 'permission:school_locations.view')
         ->middlewareFor('store', 'permission:school_locations.create|school_locations.update');
+
+    Route::get('rewards', [RewardController::class, 'index'])
+        ->middleware('permission:rewards.view')
+        ->name('rewards.index');
+
+    Route::post('rewards/{reward}/redeem', [RewardController::class, 'store'])
+        ->middleware('permission:rewards.redeem')
+        ->name('rewards.redeem');
+
+    Route::get('admin/rewards', [RewardController::class, 'adminIndex'])
+        ->middleware('permission:rewards.manage')
+        ->name('admin.rewards.index');
+
+    Route::post('admin/rewards', [RewardController::class, 'adminStore'])
+        ->middleware('permission:rewards.manage')
+        ->name('admin.rewards.store');
+
+    Route::patch('admin/rewards/{reward}', [RewardController::class, 'adminUpdate'])
+        ->middleware('permission:rewards.manage')
+        ->name('admin.rewards.update');
+
+    Route::delete('admin/rewards/{reward}', [RewardController::class, 'adminDestroy'])
+        ->middleware('permission:rewards.manage')
+        ->name('admin.rewards.destroy');
+
+    Route::patch('admin/rewards/redemptions/{redemption}', [RewardController::class, 'adminDecide'])
+        ->middleware('permission:rewards.manage')
+        ->name('admin.rewards.redemptions.decide');
 });
 
 require __DIR__.'/settings.php';
