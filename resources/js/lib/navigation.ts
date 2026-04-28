@@ -3,6 +3,7 @@ import {
     Bell,
     BarChart3,
     BookOpen,
+    BookOpenCheck,
     ClipboardCheck,
     Gift,
     GraduationCap,
@@ -45,6 +46,12 @@ const mainNavItems: NavItem[] = [
         title: 'AI Tools',
         href: '/lms/ai/tools',
         icon: Sparkles,
+        permissions: ['lms.create'],
+    },
+    {
+        title: 'Penilaian LMS',
+        href: '/lms/grading',
+        icon: BookOpenCheck,
         permissions: ['lms.create'],
     },
     {
