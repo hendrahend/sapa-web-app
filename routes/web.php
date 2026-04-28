@@ -9,6 +9,8 @@ use App\Http\Controllers\Attendance\AttendanceCheckInController;
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Attendance\AttendanceSessionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Exports\AttendanceExportController;
+use App\Http\Controllers\Exports\GradeExportController;
 use App\Http\Controllers\Grades\GradeAssessmentController;
 use App\Http\Controllers\Grades\GradeController;
 use App\Http\Controllers\Grades\GradeScoreController;
@@ -46,6 +48,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('grades', [GradeController::class, 'index'])
         ->middleware('permission:grades.view')
         ->name('grades.index');
+
+    Route::get('grades/export', GradeExportController::class)
+        ->middleware('permission:grades.view')
+        ->name('grades.export');
+
+    Route::get('attendance/export', AttendanceExportController::class)
+        ->middleware('permission:attendance.view')
+        ->name('attendance.export');
 
     Route::resource('grades/assessments', GradeAssessmentController::class)
         ->only('store')
@@ -103,25 +113,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifications.read-all');
 
     Route::resource('admin/users', UserController::class)
-        ->only(['index', 'store'])
+        ->only(['index', 'store', 'destroy'])
         ->names('admin.users')
         ->middlewareFor('index', 'permission:users.view')
-        ->middlewareFor('store', 'permission:users.create');
+        ->middlewareFor('store', 'permission:users.create')
+        ->middlewareFor('destroy', 'permission:users.delete');
 
     Route::resource('admin/students', StudentController::class)
-        ->only(['index', 'store', 'update'])
+        ->only(['index', 'store', 'update', 'destroy'])
         ->names('admin.students')
         ->middlewareFor('index', 'permission:students.view')
         ->middlewareFor('store', 'permission:students.create')
-        ->middlewareFor('update', 'permission:students.update');
+        ->middlewareFor('update', 'permission:students.update')
+        ->middlewareFor('destroy', 'permission:students.delete');
 
     Route::resource('admin/classes', SchoolClassController::class)
-        ->only(['index', 'store', 'update'])
+        ->only(['index', 'store', 'update', 'destroy'])
         ->parameters(['classes' => 'schoolClass'])
         ->names('admin.classes')
         ->middlewareFor('index', 'permission:classes.view')
         ->middlewareFor('store', 'permission:classes.create')
-        ->middlewareFor('update', 'permission:classes.update');
+        ->middlewareFor('update', 'permission:classes.update')
+        ->middlewareFor('destroy', 'permission:classes.delete');
 
     Route::resource('admin/roles', RolePermissionController::class)
         ->only(['index', 'store', 'update', 'destroy'])

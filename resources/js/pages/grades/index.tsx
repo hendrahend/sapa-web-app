@@ -4,6 +4,7 @@ import {
     BookOpen,
     CheckCircle2,
     ClipboardPlus,
+    FileSpreadsheet,
     Save,
     ShieldAlert,
 } from 'lucide-react';
@@ -220,17 +221,27 @@ export default function GradesIndex({
             <Head title="Penilaian" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        Nilai dan capaian belajar
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                        Penilaian
-                    </h1>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                        Kelola komponen nilai, input skor siswa, dan pantau
-                        siswa yang membutuhkan tindak lanjut.
-                    </p>
+                <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Nilai dan capaian belajar
+                        </p>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-normal">
+                            Penilaian
+                        </h1>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                            Kelola komponen nilai, input skor siswa, dan pantau
+                            siswa yang membutuhkan tindak lanjut.
+                        </p>
+                    </div>
+                    {canManageGrades && (
+                        <Button asChild variant="outline">
+                            <a href="/grades/export" rel="noopener">
+                                <FileSpreadsheet />
+                                Export Excel
+                            </a>
+                        </Button>
+                    )}
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-3">

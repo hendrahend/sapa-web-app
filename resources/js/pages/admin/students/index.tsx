@@ -11,6 +11,10 @@ import {
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
+import { ConfirmDelete } from '@/components/sapa/confirm-delete';
+import { DataTablePagination } from '@/components/sapa/data-table-pagination';
+import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
+import { DataTableToolbar } from '@/components/sapa/data-table-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -71,8 +75,18 @@ type StudentRow = {
     attendance_records_count: number;
 };
 
+type Paginated<T> = {
+    data: T[];
+} & PaginationMeta;
+
 type Props = {
-    students: StudentRow[];
+    students: Paginated<StudentRow>;
+    filters: {
+        search: string;
+        school_class_id: string;
+        status: string;
+        per_page: number;
+    };
     schoolClasses: SchoolClass[];
     studentUsers: StudentUserOption[];
     parentUsers: ParentUserOption[];
@@ -159,6 +173,7 @@ function statItems(stats: Props['stats']) {
 
 export default function AdminStudentsIndex({
     students,
+    filters,
     schoolClasses,
     studentUsers,
     parentUsers,
@@ -167,6 +182,7 @@ export default function AdminStudentsIndex({
     const { auth } = usePage().props;
     const canCreateStudents = auth.permissions.includes('students.create');
     const canUpdateStudents = auth.permissions.includes('students.update');
+    const canDeleteStudents = auth.permissions.includes('students.delete');
     const [editingStudentId, setEditingStudentId] = useState<number | null>(
         null,
     );
@@ -175,7 +191,8 @@ export default function AdminStudentsIndex({
 
     const editingStudent = useMemo(
         () =>
-            students.find((student) => student.id === editingStudentId) ?? null,
+            students.data.find((student) => student.id === editingStudentId) ??
+            null,
         [editingStudentId, students],
     );
 
@@ -302,7 +319,7 @@ export default function AdminStudentsIndex({
                                 Daftar siswa
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Tambah dan ubah data siswa melalui modal.
+                                {students.total} siswa terdaftar.
                             </p>
                         </div>
                         {canCreateStudents && (
@@ -312,6 +329,33 @@ export default function AdminStudentsIndex({
                             </Button>
                         )}
                     </div>
+
+                    <DataTableToolbar
+                        path="/admin/students"
+                        searchValue={filters.search}
+                        searchPlaceholder="Cari nama, NIS, atau NISN…"
+                        only={['students', 'filters']}
+                        filters={[
+                            {
+                                name: 'school_class_id',
+                                placeholder: 'Semua kelas',
+                                value: filters.school_class_id,
+                                options: schoolClasses.map((schoolClass) => ({
+                                    value: String(schoolClass.id),
+                                    label: schoolClass.name,
+                                })),
+                            },
+                            {
+                                name: 'status',
+                                placeholder: 'Semua status',
+                                value: filters.status,
+                                options: [
+                                    { value: 'active', label: 'Aktif' },
+                                    { value: 'inactive', label: 'Nonaktif' },
+                                ],
+                            },
+                        ]}
+                    />
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
@@ -335,18 +379,18 @@ export default function AdminStudentsIndex({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                {students.length === 0 && (
+                                {students.data.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={5}
                                             className="px-4 py-6 text-center text-muted-foreground"
                                         >
-                                            Belum ada data siswa.
+                                            Tidak ada siswa sesuai filter.
                                         </td>
                                     </tr>
                                 )}
 
-                                {students.map((student) => (
+                                {students.data.map((student) => (
                                     <tr key={student.id}>
                                         <td className="px-4 py-3 align-top">
                                             <p className="font-medium">
@@ -435,25 +479,39 @@ export default function AdminStudentsIndex({
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            {canUpdateStudents && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        editStudent(student)
-                                                    }
-                                                >
-                                                    <Pencil />
-                                                    Edit
-                                                </Button>
-                                            )}
+                                            <div className="flex flex-wrap items-center justify-end gap-1">
+                                                {canUpdateStudents && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            editStudent(student)
+                                                        }
+                                                    >
+                                                        <Pencil />
+                                                        Edit
+                                                    </Button>
+                                                )}
+                                                {canDeleteStudents && (
+                                                    <ConfirmDelete
+                                                        url={`/admin/students/${student.id}`}
+                                                        title="Hapus siswa?"
+                                                        description={`Data ${student.name} dan tautan orang tua akan dihapus. Akun login (jika ada) tetap.`}
+                                                    />
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    <DataTablePagination
+                        meta={students}
+                        only={['students', 'filters']}
+                    />
                 </section>
 
                 <Dialog open={isFormOpen} onOpenChange={changeFormOpen}>
