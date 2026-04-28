@@ -31,7 +31,7 @@ class ClassInsightReady extends Notification
         $atRisk = count($insight->metrics['at_risk_students'] ?? []);
 
         return [
-            'type' => 'class_insight',
+            'kind' => 'class_insight',
             'class_insight_id' => $insight->id,
             'school_class_id' => $insight->school_class_id,
             'title' => "Insight mingguan: {$className}",
