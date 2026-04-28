@@ -15,6 +15,7 @@ use App\Http\Controllers\Grades\GradeAssessmentController;
 use App\Http\Controllers\Grades\GradeController;
 use App\Http\Controllers\Grades\GradeScoreController;
 use App\Http\Controllers\Lms\LmsAiChatController;
+use App\Http\Controllers\Lms\LmsAiToolsController;
 use App\Http\Controllers\Lms\LmsAssignmentController;
 use App\Http\Controllers\Lms\LmsController;
 use App\Http\Controllers\Lms\LmsCourseController;
@@ -76,6 +77,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['index', 'store'])
         ->names('lms.ai.chat')
         ->middleware('permission:lms.view');
+
+    Route::get('lms/ai/tools', [LmsAiToolsController::class, 'index'])
+        ->middleware('permission:lms.create')
+        ->name('lms.ai.tools');
+
+    Route::post('lms/ai/tools/rubrik', [LmsAiToolsController::class, 'rubrik'])
+        ->middleware('permission:lms.create')
+        ->name('lms.ai.tools.rubrik');
+
+    Route::post('lms/ai/tools/soal', [LmsAiToolsController::class, 'soal'])
+        ->middleware('permission:lms.create')
+        ->name('lms.ai.tools.soal');
 
     Route::resource('lms/courses', LmsCourseController::class)
         ->only('store')
