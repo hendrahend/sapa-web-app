@@ -1,5 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { Bell, BellOff, CalendarCheck2, GraduationCap } from 'lucide-react';
+import {
+    Bell,
+    BellOff,
+    CalendarCheck2,
+    GraduationCap,
+    Sparkles,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTablePagination } from '@/components/sapa/data-table-pagination';
 import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
@@ -34,11 +40,29 @@ type GradeData = {
     graded_at: string | null;
 };
 
+type ClassInsightData = {
+    kind: 'class_insight';
+    class_insight_id: number;
+    school_class_id: number;
+    title: string;
+    body: string;
+    url?: string;
+};
+
 type NotificationItem = {
     id: string;
     type: string;
-    kind: 'attendance.recorded' | 'grade.released' | string | null;
-    data: AttendanceData | GradeData | Record<string, unknown>;
+    kind:
+        | 'attendance.recorded'
+        | 'grade.released'
+        | 'class_insight'
+        | string
+        | null;
+    data:
+        | AttendanceData
+        | GradeData
+        | ClassInsightData
+        | Record<string, unknown>;
     read_at: string | null;
     created_at: string | null;
 };
@@ -77,6 +101,10 @@ function isAttendance(d: NotificationItem['data']): d is AttendanceData {
 
 function isGrade(d: NotificationItem['data']): d is GradeData {
     return (d as GradeData)?.kind === 'grade.released';
+}
+
+function isClassInsight(d: NotificationItem['data']): d is ClassInsightData {
+    return (d as ClassInsightData)?.kind === 'class_insight';
 }
 
 export default function NotificationsIndex({
@@ -175,6 +203,10 @@ export default function NotificationsIndex({
                                     {
                                         value: 'grade.released',
                                         label: 'Nilai',
+                                    },
+                                    {
+                                        value: 'class_insight',
+                                        label: 'Insight kelas',
                                     },
                                 ],
                             },
@@ -284,9 +316,16 @@ function NotificationRow({
         message = `${subject}${d.student_name ?? 'Anak Anda'} mendapat ${score}${d.max_score ? '/' + d.max_score : ''}.${
             d.feedback ? ' Feedback: ' + d.feedback : ''
         }`;
+    } else if (isClassInsight(item.data)) {
+        const d = item.data;
+        icon = <Sparkles className="size-4" />;
+        accent =
+            'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300';
+        title = d.title;
+        message = d.body;
     } else {
         title = item.type;
-        message = JSON.stringify(item.data);
+        message = '';
     }
 
     return (
