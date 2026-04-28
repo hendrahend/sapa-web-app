@@ -25,6 +25,7 @@ class LmsAiChatRequest extends FormRequest
     {
         return [
             'message' => ['required', 'string', 'max:2000'],
+            'course_id' => ['nullable', 'integer', 'exists:lms_courses,id'],
             'context' => ['nullable', 'array'],
             'context.courses' => ['nullable', 'array', 'max:5'],
             'context.materials' => ['nullable', 'array', 'max:5'],

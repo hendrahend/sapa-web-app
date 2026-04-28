@@ -18,6 +18,8 @@ use App\Http\Controllers\Lms\LmsController;
 use App\Http\Controllers\Lms\LmsCourseController;
 use App\Http\Controllers\Lms\LmsMaterialController;
 use App\Http\Controllers\Lms\LmsSubmissionController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\XpController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -60,7 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('lms.index');
 
     Route::resource('lms/ai/chat', LmsAiChatController::class)
-        ->only('store')
+        ->only(['index', 'store'])
         ->names('lms.ai.chat')
         ->middleware('permission:lms.view');
 
@@ -84,13 +86,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->names('lms.assignments.submissions')
         ->middleware('permission:lms.assignments.submit');
 
-    Route::inertia('xp', 'xp/index')
+    Route::get('xp', [XpController::class, 'index'])
         ->middleware('permission:xp.view')
         ->name('xp.index');
 
-    Route::inertia('notifications', 'notifications/index')
+    Route::get('notifications', [NotificationController::class, 'index'])
         ->middleware('permission:notifications.view')
         ->name('notifications.index');
+
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])
+        ->middleware('permission:notifications.view')
+        ->name('notifications.read');
+
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->middleware('permission:notifications.view')
+        ->name('notifications.read-all');
 
     Route::resource('admin/users', UserController::class)
         ->only(['index', 'store'])
