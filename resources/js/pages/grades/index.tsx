@@ -246,10 +246,7 @@ export default function GradesIndex({
 
                 <section className="grid gap-4 md:grid-cols-3">
                     {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                        >
+                        <div key={item.label} className="sapa-card p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground">
                                     {item.label}
@@ -268,7 +265,7 @@ export default function GradesIndex({
                         <div className="grid gap-4">
                             <form
                                 onSubmit={submitAssessment}
-                                className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                                className="sapa-card p-4"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="grid size-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -522,7 +519,7 @@ export default function GradesIndex({
 
                             <form
                                 onSubmit={submitScore}
-                                className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                                className="sapa-card p-4"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="grid size-10 place-items-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
@@ -663,11 +660,14 @@ export default function GradesIndex({
                     )}
 
                     <div className="grid gap-4">
-                        <section className="rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
-                            <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                        <section className="sapa-card overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                                 <h2 className="text-lg font-semibold">
                                     Komponen terbaru
                                 </h2>
+                                <span className="text-xs text-muted-foreground">
+                                    5 terbaru · lihat semua via Export Excel
+                                </span>
                             </div>
                             <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                                 {assessments.length === 0 && (
@@ -727,11 +727,14 @@ export default function GradesIndex({
                             </div>
                         </section>
 
-                        <section className="rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
-                            <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                        <section className="sapa-card overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                                 <h2 className="text-lg font-semibold">
                                     Nilai terbaru
                                 </h2>
+                                <span className="text-xs text-muted-foreground">
+                                    10 terbaru · lihat semua via Export Excel
+                                </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">

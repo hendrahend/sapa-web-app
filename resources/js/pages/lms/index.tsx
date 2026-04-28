@@ -766,10 +766,7 @@ export default function LmsIndex({
                         )}
 
                         {filteredCourses.map((course) => (
-                            <article
-                                key={course.id}
-                                className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                            >
+                            <article key={course.id} className="sapa-card p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <p className="font-medium">

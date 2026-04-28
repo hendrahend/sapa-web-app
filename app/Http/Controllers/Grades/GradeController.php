@@ -29,7 +29,7 @@ class GradeController extends Controller
             ->withAvg('scores', 'score')
             ->latest('assessment_date')
             ->latest('id')
-            ->limit(20)
+            ->limit(5)
             ->get();
 
         $scores = GradeScore::query()
@@ -42,7 +42,7 @@ class GradeController extends Controller
             ->when(! $canManage && $student, fn ($query) => $query->where('student_id', $student->id))
             ->latest('graded_at')
             ->latest('id')
-            ->limit(30)
+            ->limit(10)
             ->get();
 
         return Inertia::render('grades/index', [

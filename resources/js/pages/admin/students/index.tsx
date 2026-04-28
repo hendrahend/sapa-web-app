@@ -295,10 +295,7 @@ export default function AdminStudentsIndex({
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                        >
+                        <div key={item.label} className="sapa-card p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground">
                                     {item.label}
