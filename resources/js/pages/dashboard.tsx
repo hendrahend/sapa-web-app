@@ -13,6 +13,16 @@ import {
     Trophy,
     UserRound,
 } from 'lucide-react';
+import { useMemo } from 'react';
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from 'recharts';
 import { dashboard } from '@/routes';
 
 type Overview = {
@@ -135,18 +145,46 @@ function initials(name: string) {
         .toUpperCase();
 }
 
-function progressPath(points: ProgressPoint[], key: 'attendance' | 'scores') {
-    const max = Math.max(1, ...points.map((point) => point[key]));
+type ChartTooltipPayload = {
+    color?: string;
+    name?: string;
+    value?: number | string;
+};
 
-    return points
-        .map((point, index) => {
-            const x =
-                points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
-            const y = 92 - (point[key] / max) * 72;
+function ChartTooltip({
+    active,
+    payload,
+    label,
+}: {
+    active?: boolean;
+    payload?: ChartTooltipPayload[];
+    label?: string;
+}) {
+    if (!active || !payload?.length) {
+        return null;
+    }
 
-            return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-        })
-        .join(' ');
+    return (
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
+            <p className="font-semibold text-foreground">{label}</p>
+            {payload.map((entry, index) => (
+                <p
+                    key={`${entry.name ?? 'value'}-${index}`}
+                    className="mt-1 flex items-center gap-2 text-muted-foreground"
+                >
+                    <span
+                        aria-hidden
+                        className="size-2 rounded-full"
+                        style={{ background: entry.color }}
+                    />
+                    <span>{entry.name}</span>
+                    <span className="font-semibold text-foreground">
+                        {entry.value}
+                    </span>
+                </p>
+            ))}
+        </div>
+    );
 }
 
 function StatPill({
@@ -189,8 +227,15 @@ export default function Dashboard({
                   Math.round((overview.xp / overview.xpToNextLevel) * 100),
               )
             : 0;
-    const attendancePath = progressPath(progress, 'attendance');
-    const scorePath = progressPath(progress, 'scores');
+    const chartData = useMemo(
+        () =>
+            progress.map((point) => ({
+                day: point.label,
+                Absensi: point.attendance,
+                Nilai: point.scores,
+            })),
+        [progress],
+    );
 
     return (
         <>
@@ -514,62 +559,115 @@ export default function Dashboard({
                                 <h2 className="text-xl font-bold tracking-normal text-foreground">
                                     Ringkasan Kemajuan
                                 </h2>
-                                <span className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground">
-                                    Graphs
+                                <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                                    7 hari terakhir
                                 </span>
                             </div>
 
                             <div className="mt-6">
-                                <svg
-                                    viewBox="0 0 100 100"
-                                    className="h-56 w-full overflow-visible"
-                                    preserveAspectRatio="none"
-                                >
-                                    {[20, 40, 60, 80].map((line) => (
-                                        <line
-                                            key={line}
-                                            x1="0"
-                                            x2="100"
-                                            y1={line}
-                                            y2={line}
-                                            stroke="var(--border)"
-                                            strokeWidth="0.6"
-                                        />
-                                    ))}
-                                    <path
-                                        d={`${attendancePath} L 100 100 L 0 100 Z`}
-                                        fill="#38bdf8"
-                                        opacity="0.16"
-                                    />
-                                    <path
-                                        d={attendancePath}
-                                        fill="none"
-                                        stroke="#0ea5e9"
-                                        strokeWidth="2.5"
-                                        strokeLinecap="round"
-                                    />
-                                    <path
-                                        d={scorePath}
-                                        fill="none"
-                                        stroke="#22c55e"
-                                        strokeWidth="2.5"
-                                        strokeLinecap="round"
-                                    />
-                                </svg>
-                                <div className="mt-3 grid grid-cols-7 gap-2 text-center text-xs text-muted-foreground">
-                                    {progress.map((point) => (
-                                        <span key={point.label}>
-                                            {point.label}
-                                        </span>
-                                    ))}
+                                <div className="h-60 w-full">
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height="100%"
+                                    >
+                                        <AreaChart
+                                            data={chartData}
+                                            margin={{
+                                                top: 10,
+                                                right: 8,
+                                                left: -16,
+                                                bottom: 0,
+                                            }}
+                                        >
+                                            <defs>
+                                                <linearGradient
+                                                    id="absensiFill"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="0%"
+                                                        stopColor="var(--chart-2)"
+                                                        stopOpacity={0.4}
+                                                    />
+                                                    <stop
+                                                        offset="100%"
+                                                        stopColor="var(--chart-2)"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                                <linearGradient
+                                                    id="nilaiFill"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="0%"
+                                                        stopColor="var(--chart-1)"
+                                                        stopOpacity={0.4}
+                                                    />
+                                                    <stop
+                                                        offset="100%"
+                                                        stopColor="var(--chart-1)"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid
+                                                strokeDasharray="4 4"
+                                                stroke="var(--border)"
+                                                vertical={false}
+                                            />
+                                            <XAxis
+                                                dataKey="day"
+                                                stroke="var(--muted-foreground)"
+                                                fontSize={12}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <YAxis
+                                                stroke="var(--muted-foreground)"
+                                                fontSize={12}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                allowDecimals={false}
+                                                width={32}
+                                            />
+                                            <Tooltip
+                                                content={<ChartTooltip />}
+                                                cursor={{
+                                                    stroke: 'var(--border)',
+                                                    strokeWidth: 1,
+                                                }}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="Absensi"
+                                                stroke="var(--chart-2)"
+                                                strokeWidth={2.5}
+                                                fill="url(#absensiFill)"
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="Nilai"
+                                                stroke="var(--chart-1)"
+                                                strokeWidth={2.5}
+                                                fill="url(#nilaiFill)"
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
                                 </div>
                                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
                                     <span className="inline-flex items-center gap-2">
-                                        <span className="size-3 rounded-full bg-sky-500" />
+                                        <span className="size-3 rounded-full bg-[var(--chart-2)]" />
                                         Absensi
                                     </span>
                                     <span className="inline-flex items-center gap-2">
-                                        <span className="size-3 rounded-full bg-emerald-500" />
+                                        <span className="size-3 rounded-full bg-[var(--chart-1)]" />
                                         Nilai
                                     </span>
                                 </div>
