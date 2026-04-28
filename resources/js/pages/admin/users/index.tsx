@@ -1,12 +1,5 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import {
-    CheckCircle2,
-    Link2,
-    Plus,
-    ShieldAlert,
-    UserRoundPlus,
-    Users,
-} from 'lucide-react';
+import { Plus, UserRoundPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -128,37 +121,11 @@ function formatDate(value: string) {
     }).format(new Date(value));
 }
 
-function statItems(stats: Props['stats']) {
-    return [
-        {
-            label: 'Total pengguna',
-            value: stats.totalUsers,
-            icon: Users,
-        },
-        {
-            label: 'Email terverifikasi',
-            value: stats.verifiedUsers,
-            icon: CheckCircle2,
-        },
-        {
-            label: 'Akun siswa tertaut',
-            value: stats.linkedStudents,
-            icon: Link2,
-        },
-        {
-            label: 'Tanpa role',
-            value: stats.withoutRole,
-            icon: ShieldAlert,
-        },
-    ];
-}
-
 export default function AdminUsersIndex({
     users,
     filters,
     roles,
     schoolClasses,
-    stats,
 }: Props) {
     const { auth } = usePage().props;
     const canCreateUsers = auth.permissions.includes('users.create');
@@ -231,25 +198,6 @@ export default function AdminUsersIndex({
                             Tambah pengguna
                         </Button>
                     )}
-                </section>
-
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                        >
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm text-muted-foreground">
-                                    {item.label}
-                                </p>
-                                <item.icon className="size-4 text-muted-foreground" />
-                            </div>
-                            <p className="mt-3 text-2xl font-semibold">
-                                {item.value}
-                            </p>
-                        </div>
-                    ))}
                 </section>
 
                 <Dialog open={isCreateOpen} onOpenChange={changeCreateOpen}>
@@ -525,7 +473,7 @@ export default function AdminUsersIndex({
                 </Dialog>
 
                 <section className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_1fr]">
-                    <div className="h-fit rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                    <div className="sapa-card h-fit">
                         <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                             <h2 className="text-lg font-semibold">
                                 Komposisi role
@@ -553,7 +501,7 @@ export default function AdminUsersIndex({
                         </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                    <div className="sapa-card overflow-hidden">
                         <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                             <h2 className="text-lg font-semibold">Pengguna</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
