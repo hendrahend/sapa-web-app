@@ -10,6 +10,7 @@ import {
     MapPinned,
     School,
     ShieldCheck,
+    Sparkles,
     Store,
     Users,
 } from 'lucide-react';
@@ -38,6 +39,12 @@ const mainNavItems: NavItem[] = [
         href: '/lms',
         icon: BookOpen,
         permissions: ['lms.view'],
+    },
+    {
+        title: 'AI Tools',
+        href: '/lms/ai/tools',
+        icon: Sparkles,
+        permissions: ['lms.create'],
     },
     {
         title: 'XP',
