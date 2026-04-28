@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Attendance\AttendanceCheckInController;
 use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\Attendance\AttendanceExcuseController;
 use App\Http\Controllers\Attendance\AttendanceSessionController;
 use App\Http\Controllers\ClassInsightController;
 use App\Http\Controllers\DashboardController;
@@ -48,6 +49,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('attendance/check-in', [AttendanceCheckInController::class, 'store'])
         ->middleware('permission:attendance.own.create')
         ->name('attendance.check-in.store');
+
+    Route::get('attendance/excuses', [AttendanceExcuseController::class, 'index'])
+        ->middleware('permission:attendance.view|attendance.own.view')
+        ->name('attendance.excuses.index');
+
+    Route::post('attendance/excuses', [AttendanceExcuseController::class, 'store'])
+        ->middleware('permission:attendance.own.create')
+        ->name('attendance.excuses.store');
+
+    Route::patch('attendance/excuses/{excuse}', [AttendanceExcuseController::class, 'decide'])
+        ->middleware('permission:attendance.create')
+        ->name('attendance.excuses.decide');
 
     Route::get('grades', [GradeController::class, 'index'])
         ->middleware('permission:grades.view')
