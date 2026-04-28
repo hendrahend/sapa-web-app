@@ -82,10 +82,15 @@ class LmsGradingController extends Controller
             'aiEnabled' => filled(config('services.groq.key')),
             'stats' => [
                 'pending' => LmsSubmission::query()
+                    ->whereHas('assignment')
                     ->whereNotNull('content')
+                    ->whereNotNull('submitted_at')
                     ->whereNull('graded_at')
                     ->count(),
                 'graded' => LmsSubmission::query()
+                    ->whereHas('assignment')
+                    ->whereNotNull('content')
+                    ->whereNotNull('submitted_at')
                     ->whereNotNull('graded_at')
                     ->count(),
             ],

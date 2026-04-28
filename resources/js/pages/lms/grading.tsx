@@ -301,7 +301,7 @@ function ReviewDialog({
                             ?.getAttribute('content') ?? '',
                 },
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}) as { message?: string; ai_grade_data?: AiGrade });
 
             if (!res.ok) {
                 setAiError(data.message ?? 'Gagal menjalankan AI grading.');
@@ -309,8 +309,10 @@ function ReviewDialog({
                 return;
             }
 
-            setAi(data.ai_grade_data);
+            setAi(data.ai_grade_data ?? null);
             toast.success('Draft AI sudah siap. Review dan edit jika perlu.');
+        } catch {
+            setAiError('Gagal menjalankan AI grading. Coba lagi sebentar.');
         } finally {
             setAiLoading(false);
         }
