@@ -11,9 +11,11 @@ import {
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 
+type XpSource = keyof typeof sourceMeta;
+
 type XpEvent = {
     id: number;
-    source: 'attendance' | 'grade' | 'lms';
+    source: string;
     points: number;
     reason: string | null;
     awarded_at: string | null;
@@ -69,6 +71,9 @@ const sourceMeta = {
     },
     grade: { label: 'Nilai', icon: GraduationCap, color: 'text-amber-600' },
     lms: { label: 'LMS', icon: BookOpenCheck, color: 'text-sky-600' },
+    lms_graded: { label: 'LMS dinilai', icon: BookOpenCheck, color: 'text-sky-600' },
+    reward_redemption: { label: 'Tukar reward', icon: Sparkles, color: 'text-rose-600' },
+    reward_refund: { label: 'Refund reward', icon: Sparkles, color: 'text-emerald-600' },
 } as const;
 
 function formatDateTime(value: string | null) {
@@ -210,7 +215,7 @@ export default function XpIndex({
                             ) : (
                                 <ul className="mt-4 divide-y divide-sidebar-border/60">
                                     {events.map((e) => {
-                                        const meta = sourceMeta[e.source];
+                                        const meta = sourceMeta[e.source as XpSource];
                                         const Icon = meta?.icon ?? Sparkles;
 
                                         return (

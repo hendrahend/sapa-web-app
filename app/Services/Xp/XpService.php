@@ -137,12 +137,11 @@ class XpService
         }
 
         $points = (int) config('sapa.xp.lms_graded', 15);
-        $sourceId = -((int) $submission->id); // dedupe key separate from submission insert
 
         return $this->record(
             studentId: $submission->student_id,
-            source: 'lms',
-            sourceId: $sourceId,
+            source: 'lms_graded',
+            sourceId: (int) $submission->id,
             points: $points,
             reason: 'Tugas LMS dinilai',
             awardedAt: $submission->graded_at,
