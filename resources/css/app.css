@@ -165,12 +165,13 @@
             );
     }
 
-    .sapa-card {
-        @apply rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm;
+    .sapa-card,
+    .sapa-soft-card {
+        @apply rounded-lg border border-sidebar-border/70 bg-card text-card-foreground shadow-sm dark:border-sidebar-border;
     }
 
-    .sapa-soft-card {
-        @apply rounded-lg border border-border/70 bg-card/80 text-card-foreground shadow-sm backdrop-blur;
+    .sapa-panel {
+        @apply rounded-lg border border-sidebar-border/70 dark:border-sidebar-border;
     }
 
     .sapa-gradient {

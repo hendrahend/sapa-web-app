@@ -136,7 +136,7 @@ export default function XpIndex({
                 <div className="grid gap-6 lg:grid-cols-3">
                     {/* Progress + recent events */}
                     <section className="space-y-6 lg:col-span-2">
-                        <div className="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+                        <div className="sapa-card p-5">
                             {student ? (
                                 <>
                                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -194,7 +194,7 @@ export default function XpIndex({
                             )}
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+                        <div className="sapa-card p-5">
                             <h3 className="text-base font-semibold">
                                 Aktivitas XP terakhir
                             </h3>
@@ -252,7 +252,7 @@ export default function XpIndex({
 
                     {/* Leaderboard + badges */}
                     <section className="space-y-6">
-                        <div className="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+                        <div className="sapa-card p-5">
                             <div className="flex items-center justify-between gap-3">
                                 <h3 className="text-base font-semibold">
                                     Papan peringkat
@@ -354,7 +354,7 @@ export default function XpIndex({
                             )}
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+                        <div className="sapa-card p-5">
                             <h3 className="text-base font-semibold">Badge</h3>
                             <p className="text-xs text-muted-foreground">
                                 Capai milestone untuk membuka badge.
@@ -423,7 +423,7 @@ function StatCard({
     icon: React.ReactNode;
 }) {
     return (
-        <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+        <div className="sapa-card p-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">{label}</p>
                 {icon}
