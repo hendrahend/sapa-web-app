@@ -11,6 +11,13 @@ import {
 import { EmptyState } from '@/components/sapa/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 type SchoolClass = {
     id: number;
@@ -70,7 +77,7 @@ export default function ClassInsightsIndex({
 }: Props) {
     const form = useForm({ school_class_id: selectedClassId ?? 0 });
 
-    function selectClass(id: number) {
+    function selectClass(id: string) {
         router.get(
             '/class-insights',
             { class: id },
@@ -88,6 +95,7 @@ export default function ClassInsightsIndex({
     }
 
     const latest = insights[0];
+    const selectedClass = classes.find((c) => c.id === selectedClassId);
 
     return (
         <>
@@ -138,22 +146,41 @@ export default function ClassInsightsIndex({
                     </div>
                 ) : (
                     <>
-                        <div className="flex flex-wrap gap-2">
-                            {classes.map((c) => (
-                                <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => selectClass(c.id)}
-                                    className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                                        selectedClassId === c.id
-                                            ? 'border-primary bg-primary/10 text-primary'
-                                            : 'border-sidebar-border/70 text-muted-foreground hover:bg-muted dark:border-sidebar-border'
-                                    }`}
+                        <section className="sapa-card p-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h2 className="font-semibold">
+                                        Pilih kelas
+                                    </h2>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {selectedClass
+                                            ? `${selectedClass.name}${selectedClass.grade_level ? ` · Tingkat ${selectedClass.grade_level}` : ''}`
+                                            : 'Pilih kelas untuk melihat insight mingguannya.'}
+                                    </p>
+                                </div>
+                                <Select
+                                    value={selectedClassId?.toString() ?? ''}
+                                    onValueChange={selectClass}
                                 >
-                                    {c.name}
-                                </button>
-                            ))}
-                        </div>
+                                    <SelectTrigger className="w-full md:w-72">
+                                        <SelectValue placeholder="Pilih kelas" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {classes.map((c) => (
+                                            <SelectItem
+                                                key={c.id}
+                                                value={c.id.toString()}
+                                            >
+                                                {c.name}
+                                                {c.grade_level
+                                                    ? ` · ${c.grade_level}`
+                                                    : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </section>
 
                         {latest ? (
                             <InsightCard insight={latest} primary />
