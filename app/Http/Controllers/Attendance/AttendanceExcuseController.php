@@ -111,7 +111,7 @@ class AttendanceExcuseController extends Controller
 
         $this->successToast('Pengajuan izin/sakit terkirim. Menunggu persetujuan guru.');
 
-        return to_route('attendance.excuses.index');
+        return to_route('attendance.index');
     }
 
     public function decide(AttendanceExcuseDecisionRequest $request, AttendanceExcuse $excuse): RedirectResponse

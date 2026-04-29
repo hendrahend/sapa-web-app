@@ -18,6 +18,8 @@ class AttendanceExport implements FromCollection, ShouldAutoSize, WithHeadings, 
         private readonly ?int $schoolClassId = null,
         private readonly ?Carbon $startDate = null,
         private readonly ?Carbon $endDate = null,
+        private readonly ?string $status = null,
+        private readonly ?string $verificationStatus = null,
     ) {}
 
     public function collection()
@@ -26,16 +28,24 @@ class AttendanceExport implements FromCollection, ShouldAutoSize, WithHeadings, 
             ->with([
                 'student:id,name,nis,school_class_id',
                 'student.schoolClass:id,name',
-                'session:id,title,attendance_date,school_class_id',
+                'session:id,title,attendance_date,school_class_id,school_location_id',
                 'session.schoolLocation:id,name',
             ])
             ->when($this->schoolClassId, fn ($query, $id) => $query->whereHas(
                 'session',
                 fn ($q) => $q->where('school_class_id', $id)
             ))
-            ->when($this->startDate, fn ($query, $start) => $query->whereDate('checked_in_at', '>=', $start))
-            ->when($this->endDate, fn ($query, $end) => $query->whereDate('checked_in_at', '<=', $end))
-            ->orderByDesc('checked_in_at')
+            ->when($this->startDate, fn ($query, $start) => $query->whereHas(
+                'session',
+                fn ($q) => $q->whereDate('attendance_date', '>=', $start)
+            ))
+            ->when($this->endDate, fn ($query, $end) => $query->whereHas(
+                'session',
+                fn ($q) => $q->whereDate('attendance_date', '<=', $end)
+            ))
+            ->when($this->status, fn ($query, $status) => $query->where('status', $status))
+            ->when($this->verificationStatus, fn ($query, $status) => $query->where('verification_status', $status))
+            ->orderByDesc('id')
             ->get();
     }
 
@@ -69,7 +79,9 @@ class AttendanceExport implements FromCollection, ShouldAutoSize, WithHeadings, 
             $row->session?->schoolLocation?->name ?? '-',
             $row->status?->value ?? '-',
             $row->verification_status?->value ?? '-',
-            $row->is_within_radius ? 'Ya' : 'Tidak',
+            $row->is_within_radius === null
+                ? '-'
+                : ($row->is_within_radius ? 'Ya' : 'Tidak'),
             $row->distance_from_school_meters !== null
                 ? round((float) $row->distance_from_school_meters, 1)
                 : '-',

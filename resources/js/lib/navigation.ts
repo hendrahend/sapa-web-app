@@ -5,7 +5,6 @@ import {
     BookOpen,
     BookOpenCheck,
     ClipboardCheck,
-    FileHeart,
     Gift,
     GraduationCap,
     IdCard,
@@ -29,12 +28,6 @@ const mainNavItems: NavItem[] = [
         title: 'Absensi',
         href: '/attendance',
         icon: ClipboardCheck,
-        permissions: ['attendance.view', 'attendance.own.view'],
-    },
-    {
-        title: 'Izin & Sakit',
-        href: '/attendance/excuses',
-        icon: FileHeart,
         permissions: ['attendance.view', 'attendance.own.view'],
     },
     {

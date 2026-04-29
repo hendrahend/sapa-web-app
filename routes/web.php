@@ -50,6 +50,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:attendance.own.create')
         ->name('attendance.check-in.store');
 
+    Route::patch('attendance/records/{record}/verification', [AttendanceController::class, 'verifyRecord'])
+        ->middleware('permission:attendance.update')
+        ->name('attendance.records.verify');
+
     Route::get('attendance/excuses', [AttendanceExcuseController::class, 'index'])
         ->middleware('permission:attendance.view|attendance.own.view')
         ->name('attendance.excuses.index');
