@@ -683,7 +683,7 @@ function StudentDashboard({
                         menambah XP. XP bisa kamu tukar menjadi reward.
                     </p>
                     <Link
-                        href="/rewards"
+                        href="/xp?tab=rewards"
                         className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
                     >
                         <Sparkles className="size-4" />

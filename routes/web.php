@@ -27,6 +27,7 @@ use App\Http\Controllers\Lms\LmsSubmissionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Rewards\RewardController;
 use App\Http\Controllers\XpController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -117,7 +118,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:lms.create')
         ->name('lms.ai.tools.soal');
 
-    Route::get('lms/grading', [LmsGradingController::class, 'index'])
+    Route::get('lms/grading', fn (Request $request) => redirect()->route('grades.index', [
+        'grade_tab' => 'lms',
+        'lms_tab' => $request->string('tab')->toString() === 'graded' ? 'graded' : 'pending',
+    ]))
         ->middleware('permission:lms.create')
         ->name('lms.grading.index');
 
@@ -150,7 +154,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:lms.assignments.submit');
 
     Route::get('xp', [XpController::class, 'index'])
-        ->middleware('permission:xp.view')
+        ->middleware('permission:xp.view|rewards.view')
         ->name('xp.index');
 
     Route::get('notifications', [NotificationController::class, 'index'])
@@ -203,7 +207,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middlewareFor('index', 'permission:school_locations.view')
         ->middlewareFor('store', 'permission:school_locations.create|school_locations.update');
 
-    Route::get('rewards', [RewardController::class, 'index'])
+    Route::get('rewards', fn () => redirect()->route('xp.index', ['tab' => 'rewards']))
         ->middleware('permission:rewards.view')
         ->name('rewards.index');
 

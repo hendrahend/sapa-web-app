@@ -103,7 +103,7 @@ class RewardController extends Controller
         }
 
         return redirect()
-            ->route('rewards.index')
+            ->route('xp.index', ['tab' => 'rewards'])
             ->with('success', 'Pengajuan reward berhasil. Tunggu persetujuan admin/guru.');
     }
 
