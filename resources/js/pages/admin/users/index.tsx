@@ -472,35 +472,7 @@ export default function AdminUsersIndex({
                     </DialogContent>
                 </Dialog>
 
-                <section className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_1fr]">
-                    <div className="sapa-card h-fit">
-                        <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                            <h2 className="text-lg font-semibold">
-                                Komposisi role
-                            </h2>
-                        </div>
-                        <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                            {roles.map((role) => (
-                                <div
-                                    key={role.id}
-                                    className="flex items-center justify-between gap-3 p-4"
-                                >
-                                    <div>
-                                        <p className="font-medium">
-                                            {role.label}
-                                        </p>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            {role.name}
-                                        </p>
-                                    </div>
-                                    <Badge variant="secondary">
-                                        {role.users_count}
-                                    </Badge>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
+                <section className="grid gap-4">
                     <div className="sapa-card overflow-hidden">
                         <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                             <h2 className="text-lg font-semibold">Pengguna</h2>

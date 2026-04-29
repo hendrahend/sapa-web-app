@@ -1,7 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     BarChart3,
-    BookOpen,
     BookOpenCheck,
     CheckCircle2,
     ClipboardPlus,
@@ -20,6 +19,14 @@ import InputError from '@/components/input-error';
 import { EmptyState } from '@/components/sapa/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -229,6 +236,8 @@ export default function GradesIndex({
     const [selectedLmsClass, setSelectedLmsClass] = useState(
         lmsFilters.school_class_id,
     );
+    const [isAssessmentFormOpen, setIsAssessmentFormOpen] = useState(false);
+    const [isScoreFormOpen, setIsScoreFormOpen] = useState(false);
     const assessmentForm = useForm<AssessmentForm>({
         subject_id: subjects[0]?.id.toString() ?? '',
         school_class_id: schoolClasses[0]?.id.toString() ?? '',
@@ -262,6 +271,7 @@ export default function GradesIndex({
         event.preventDefault();
         assessmentForm.post('/grades/assessments', {
             preserveScroll: true,
+            onSuccess: () => setIsAssessmentFormOpen(false),
         });
     }
 
@@ -269,12 +279,14 @@ export default function GradesIndex({
         event.preventDefault();
         scoreForm.post('/grades/scores', {
             preserveScroll: true,
-            onSuccess: () =>
+            onSuccess: () => {
+                setIsScoreFormOpen(false);
                 scoreForm.setData((values) => ({
                     ...values,
                     score: '',
                     feedback: '',
-                })),
+                }));
+            },
         });
     }
 
@@ -381,678 +393,219 @@ export default function GradesIndex({
                             ))}
                         </section>
 
-                        <section className="sapa-card border-primary/20 bg-primary/5 p-4">
-                            <div className="flex items-start gap-3">
-                                <BookOpen className="mt-0.5 size-5 text-primary" />
+                        <section className="sapa-card p-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div>
                                     <h2 className="font-semibold">
-                                        Alur nilai akademik
+                                        Nilai akademik
                                     </h2>
                                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                        Buat komponen nilai seperti tugas, kuis,
-                                        praktik, UTS, atau UAS. Setelah itu
-                                        pilih komponen tersebut saat menginput
-                                        skor siswa. Rata-rata dan rekap bisa
-                                        di-export ke Excel.
+                                        Kelola komponen, input skor siswa, lalu
+                                        export rekap saat dibutuhkan.
                                     </p>
                                 </div>
+                                {canManageGrades && (
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            onClick={() =>
+                                                setIsAssessmentFormOpen(true)
+                                            }
+                                        >
+                                            <ClipboardPlus />
+                                            Buat komponen
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                setIsScoreFormOpen(true)
+                                            }
+                                        >
+                                            <Save />
+                                            Input nilai
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </section>
 
-                        <section className="grid gap-4 xl:grid-cols-[minmax(340px,430px)_1fr]">
-                            {canManageGrades && (
-                                <div className="grid gap-4">
-                                    <form
-                                        onSubmit={submitAssessment}
-                                        className="sapa-card p-4"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="grid size-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                                <BookOpen className="size-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">
-                                                    Guru
-                                                </p>
-                                                <h2 className="text-lg font-semibold">
-                                                    Buat komponen nilai
-                                                </h2>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 grid gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>Judul</Label>
-                                                <Input
-                                                    value={
-                                                        assessmentForm.data
-                                                            .title
-                                                    }
-                                                    onChange={(event) =>
-                                                        assessmentForm.setData(
-                                                            'title',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                <InputError
-                                                    message={
-                                                        assessmentForm.errors
-                                                            .title
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-4 sm:grid-cols-2">
-                                                <div className="grid gap-2">
-                                                    <Label>Mapel</Label>
-                                                    <Select
-                                                        value={
-                                                            assessmentForm.data
-                                                                .subject_id
-                                                        }
-                                                        onValueChange={(
-                                                            value,
-                                                        ) =>
-                                                            assessmentForm.setData(
-                                                                'subject_id',
-                                                                value,
-                                                            )
-                                                        }
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Pilih mapel" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {subjects.map(
-                                                                (subject) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            subject.id
-                                                                        }
-                                                                        value={subject.id.toString()}
-                                                                    >
-                                                                        {
-                                                                            subject.name
-                                                                        }
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <InputError
-                                                        message={
-                                                            assessmentForm
-                                                                .errors
-                                                                .subject_id
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="grid gap-2">
-                                                    <Label>Kelas</Label>
-                                                    <Select
-                                                        value={
-                                                            assessmentForm.data
-                                                                .school_class_id
-                                                        }
-                                                        onValueChange={(
-                                                            value,
-                                                        ) =>
-                                                            assessmentForm.setData(
-                                                                'school_class_id',
-                                                                value,
-                                                            )
-                                                        }
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Pilih kelas" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {schoolClasses.map(
-                                                                (
-                                                                    schoolClass,
-                                                                ) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            schoolClass.id
-                                                                        }
-                                                                        value={schoolClass.id.toString()}
-                                                                    >
-                                                                        {
-                                                                            schoolClass.name
-                                                                        }
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <InputError
-                                                        message={
-                                                            assessmentForm
-                                                                .errors
-                                                                .school_class_id
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid gap-4 sm:grid-cols-3">
-                                                <div className="grid gap-2">
-                                                    <Label>Tipe</Label>
-                                                    <Select
-                                                        value={
-                                                            assessmentForm.data
-                                                                .type
-                                                        }
-                                                        onValueChange={(
-                                                            value,
-                                                        ) =>
-                                                            assessmentForm.setData(
-                                                                'type',
-                                                                value,
-                                                            )
-                                                        }
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {assessmentTypes.map(
-                                                                ([
-                                                                    value,
-                                                                    label,
-                                                                ]) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            value
-                                                                        }
-                                                                        value={
-                                                                            value
-                                                                        }
-                                                                    >
-                                                                        {label}
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <InputError
-                                                        message={
-                                                            assessmentForm
-                                                                .errors.type
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="grid gap-2">
-                                                    <Label>Skor maks</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        value={
-                                                            assessmentForm.data
-                                                                .max_score
-                                                        }
-                                                        onChange={(event) =>
-                                                            assessmentForm.setData(
-                                                                'max_score',
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                    />
-                                                    <InputError
-                                                        message={
-                                                            assessmentForm
-                                                                .errors
-                                                                .max_score
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="grid gap-2">
-                                                    <Label>Bobot %</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        max="100"
-                                                        value={
-                                                            assessmentForm.data
-                                                                .weight
-                                                        }
-                                                        onChange={(event) =>
-                                                            assessmentForm.setData(
-                                                                'weight',
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                    />
-                                                    <InputError
-                                                        message={
-                                                            assessmentForm
-                                                                .errors.weight
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label>Tanggal</Label>
-                                                <Input
-                                                    type="date"
-                                                    value={
-                                                        assessmentForm.data
-                                                            .assessment_date
-                                                    }
-                                                    onChange={(event) =>
-                                                        assessmentForm.setData(
-                                                            'assessment_date',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                <InputError
-                                                    message={
-                                                        assessmentForm.errors
-                                                            .assessment_date
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label>Deskripsi</Label>
-                                                <textarea
-                                                    value={
-                                                        assessmentForm.data
-                                                            .description
-                                                    }
-                                                    onChange={(event) =>
-                                                        assessmentForm.setData(
-                                                            'description',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    className="min-h-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                />
-                                                <InputError
-                                                    message={
-                                                        assessmentForm.errors
-                                                            .description
-                                                    }
-                                                />
-                                            </div>
-
-                                            <Button
-                                                disabled={
-                                                    assessmentForm.processing
-                                                }
-                                            >
-                                                <ClipboardPlus />
-                                                Simpan komponen
-                                            </Button>
-                                        </div>
-                                    </form>
-
-                                    <form
-                                        onSubmit={submitScore}
-                                        className="sapa-card p-4"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="grid size-10 place-items-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                                                <Save className="size-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">
-                                                    Input nilai
-                                                </p>
-                                                <h2 className="text-lg font-semibold">
-                                                    Skor siswa
-                                                </h2>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 grid gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>Komponen</Label>
-                                                <Select
-                                                    value={
-                                                        scoreForm.data
-                                                            .grade_assessment_id
-                                                    }
-                                                    onValueChange={(value) =>
-                                                        scoreForm.setData(
-                                                            (values) => ({
-                                                                ...values,
-                                                                grade_assessment_id:
-                                                                    value,
-                                                                student_id: '',
-                                                            }),
-                                                        )
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Pilih komponen" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {assessments.map(
-                                                            (assessment) => (
-                                                                <SelectItem
-                                                                    key={
-                                                                        assessment.id
-                                                                    }
-                                                                    value={assessment.id.toString()}
-                                                                >
-                                                                    {
-                                                                        assessment.title
-                                                                    }{' '}
-                                                                    -{' '}
-                                                                    {
-                                                                        assessment
-                                                                            .school_class
-                                                                            .name
-                                                                    }
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <InputError
-                                                    message={
-                                                        scoreForm.errors
-                                                            .grade_assessment_id
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label>Siswa</Label>
-                                                <Select
-                                                    value={
-                                                        scoreForm.data
-                                                            .student_id
-                                                    }
-                                                    onValueChange={(value) =>
-                                                        scoreForm.setData(
-                                                            'student_id',
-                                                            value,
-                                                        )
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Pilih siswa" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {selectableStudents.map(
-                                                            (student) => (
-                                                                <SelectItem
-                                                                    key={
-                                                                        student.id
-                                                                    }
-                                                                    value={student.id.toString()}
-                                                                >
-                                                                    {
-                                                                        student.name
-                                                                    }
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <InputError
-                                                    message={
-                                                        scoreForm.errors
-                                                            .student_id
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label>Skor</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={scoreForm.data.score}
-                                                    onChange={(event) =>
-                                                        scoreForm.setData(
-                                                            'score',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                <InputError
-                                                    message={
-                                                        scoreForm.errors.score
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label>Feedback</Label>
-                                                <textarea
-                                                    value={
-                                                        scoreForm.data.feedback
-                                                    }
-                                                    onChange={(event) =>
-                                                        scoreForm.setData(
-                                                            'feedback',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                />
-                                                <InputError
-                                                    message={
-                                                        scoreForm.errors
-                                                            .feedback
-                                                    }
-                                                />
-                                            </div>
-
-                                            <Button
-                                                disabled={scoreForm.processing}
-                                            >
-                                                <Save />
-                                                Simpan nilai
-                                            </Button>
-                                        </div>
-                                    </form>
+                        <section className="grid gap-4 xl:grid-cols-2">
+                            <section className="sapa-card overflow-hidden">
+                                <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                    <h2 className="text-lg font-semibold">
+                                        Komponen terbaru
+                                    </h2>
+                                    <span className="text-xs text-muted-foreground">
+                                        5 terbaru · lihat semua via Export Excel
+                                    </span>
                                 </div>
-                            )}
+                                <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
+                                    {assessments.length === 0 && (
+                                        <div className="p-4 text-sm text-muted-foreground">
+                                            Belum ada komponen nilai.
+                                        </div>
+                                    )}
 
-                            <div className="grid gap-4">
-                                <section className="sapa-card overflow-hidden">
-                                    <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                                        <h2 className="text-lg font-semibold">
-                                            Komponen terbaru
-                                        </h2>
-                                        <span className="text-xs text-muted-foreground">
-                                            5 terbaru · lihat semua via Export
-                                            Excel
-                                        </span>
-                                    </div>
-                                    <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                        {assessments.length === 0 && (
-                                            <div className="p-4 text-sm text-muted-foreground">
-                                                Belum ada komponen nilai.
-                                            </div>
-                                        )}
-
-                                        {assessments.map((assessment) => (
-                                            <div
-                                                key={assessment.id}
-                                                className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"
-                                            >
-                                                <div>
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="font-medium">
-                                                            {assessment.title}
-                                                        </p>
-                                                        <Badge variant="outline">
-                                                            {typeLabel(
-                                                                assessment.type,
-                                                            )}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                                        <span>
-                                                            {
-                                                                assessment
-                                                                    .subject
-                                                                    .name
-                                                            }
-                                                        </span>
-                                                        <span>
-                                                            {
-                                                                assessment
-                                                                    .school_class
-                                                                    .name
-                                                            }
-                                                        </span>
-                                                        <span>
-                                                            {formatDate(
-                                                                assessment.assessment_date,
-                                                            )}
-                                                        </span>
-                                                        <span>
-                                                            Bobot{' '}
-                                                            {assessment.weight}%
-                                                        </span>
-                                                    </div>
+                                    {assessments.map((assessment) => (
+                                        <div
+                                            key={assessment.id}
+                                            className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"
+                                        >
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="font-medium">
+                                                        {assessment.title}
+                                                    </p>
+                                                    <Badge variant="outline">
+                                                        {typeLabel(
+                                                            assessment.type,
+                                                        )}
+                                                    </Badge>
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                                                    <BarChart3 className="size-4" />
-                                                    {assessment.scores_count}{' '}
-                                                    nilai
+                                                <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
                                                     <span>
-                                                        Rata-rata{' '}
-                                                        {assessment.scores_avg_score
-                                                            ? Number(
-                                                                  assessment.scores_avg_score,
-                                                              ).toFixed(1)
-                                                            : '-'}
+                                                        {
+                                                            assessment.subject
+                                                                .name
+                                                        }
+                                                    </span>
+                                                    <span>
+                                                        {
+                                                            assessment
+                                                                .school_class
+                                                                .name
+                                                        }
+                                                    </span>
+                                                    <span>
+                                                        {formatDate(
+                                                            assessment.assessment_date,
+                                                        )}
+                                                    </span>
+                                                    <span>
+                                                        Bobot{' '}
+                                                        {assessment.weight}%
                                                     </span>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                </section>
+                                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                                <BarChart3 className="size-4" />
+                                                {assessment.scores_count} nilai
+                                                <span>
+                                                    Rata-rata{' '}
+                                                    {assessment.scores_avg_score
+                                                        ? Number(
+                                                              assessment.scores_avg_score,
+                                                          ).toFixed(1)
+                                                        : '-'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
 
-                                <section className="sapa-card overflow-hidden">
-                                    <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                                        <h2 className="text-lg font-semibold">
-                                            Nilai terbaru
-                                        </h2>
-                                        <span className="text-xs text-muted-foreground">
-                                            10 terbaru · lihat semua via Export
-                                            Excel
-                                        </span>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="border-b border-sidebar-border/70 bg-muted/40 text-muted-foreground dark:border-sidebar-border">
+                            <section className="sapa-card overflow-hidden">
+                                <div className="flex items-center justify-between border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                    <h2 className="text-lg font-semibold">
+                                        Nilai terbaru
+                                    </h2>
+                                    <span className="text-xs text-muted-foreground">
+                                        10 terbaru · lihat semua via Export
+                                        Excel
+                                    </span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="border-b border-sidebar-border/70 bg-muted/40 text-muted-foreground dark:border-sidebar-border">
+                                            <tr>
+                                                <th className="px-4 py-3 font-medium">
+                                                    Siswa
+                                                </th>
+                                                <th className="px-4 py-3 font-medium">
+                                                    Komponen
+                                                </th>
+                                                <th className="px-4 py-3 font-medium">
+                                                    Skor
+                                                </th>
+                                                <th className="px-4 py-3 font-medium">
+                                                    Feedback
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
+                                            {scores.length === 0 && (
                                                 <tr>
-                                                    <th className="px-4 py-3 font-medium">
-                                                        Siswa
-                                                    </th>
-                                                    <th className="px-4 py-3 font-medium">
-                                                        Komponen
-                                                    </th>
-                                                    <th className="px-4 py-3 font-medium">
-                                                        Skor
-                                                    </th>
-                                                    <th className="px-4 py-3 font-medium">
-                                                        Feedback
-                                                    </th>
+                                                    <td
+                                                        colSpan={4}
+                                                        className="px-4 py-6 text-center text-muted-foreground"
+                                                    >
+                                                        Belum ada nilai masuk.
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                                {scores.length === 0 && (
-                                                    <tr>
-                                                        <td
-                                                            colSpan={4}
-                                                            className="px-4 py-6 text-center text-muted-foreground"
-                                                        >
-                                                            Belum ada nilai
-                                                            masuk.
-                                                        </td>
-                                                    </tr>
-                                                )}
+                                            )}
 
-                                                {scores.map((score) => (
-                                                    <tr key={score.id}>
-                                                        <td className="px-4 py-3 align-top">
-                                                            <p className="font-medium">
-                                                                {
-                                                                    score
-                                                                        .student
-                                                                        .name
-                                                                }
-                                                            </p>
-                                                            <p className="mt-1 text-muted-foreground">
-                                                                {score.student
-                                                                    .school_class
-                                                                    ?.name ??
-                                                                    '-'}
-                                                            </p>
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top">
-                                                            <p className="font-medium">
-                                                                {
-                                                                    score
-                                                                        .assessment
-                                                                        .title
-                                                                }
-                                                            </p>
-                                                            <p className="mt-1 text-muted-foreground">
-                                                                {
-                                                                    score
-                                                                        .assessment
-                                                                        .subject
-                                                                        .name
-                                                                }{' '}
-                                                                -{' '}
-                                                                {typeLabel(
-                                                                    score
-                                                                        .assessment
-                                                                        .type,
-                                                                )}
-                                                            </p>
-                                                        </td>
-                                                        <td className="px-4 py-3 align-top">
-                                                            <Badge
-                                                                variant={
-                                                                    Number(
-                                                                        score.score,
-                                                                    ) >= 75
-                                                                        ? 'secondary'
-                                                                        : 'outline'
-                                                                }
-                                                            >
-                                                                {Number(
+                                            {scores.map((score) => (
+                                                <tr key={score.id}>
+                                                    <td className="px-4 py-3 align-top">
+                                                        <p className="font-medium">
+                                                            {score.student.name}
+                                                        </p>
+                                                        <p className="mt-1 text-muted-foreground">
+                                                            {score.student
+                                                                .school_class
+                                                                ?.name ?? '-'}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        <p className="font-medium">
+                                                            {
+                                                                score.assessment
+                                                                    .title
+                                                            }
+                                                        </p>
+                                                        <p className="mt-1 text-muted-foreground">
+                                                            {
+                                                                score.assessment
+                                                                    .subject
+                                                                    .name
+                                                            }{' '}
+                                                            -{' '}
+                                                            {typeLabel(
+                                                                score.assessment
+                                                                    .type,
+                                                            )}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        <Badge
+                                                            variant={
+                                                                Number(
                                                                     score.score,
-                                                                ).toFixed(1)}
-                                                                /
-                                                                {
-                                                                    score
-                                                                        .assessment
-                                                                        .max_score
-                                                                }
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="max-w-sm px-4 py-3 align-top text-muted-foreground">
-                                                            {score.feedback ??
-                                                                '-'}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </section>
-                            </div>
+                                                                ) >= 75
+                                                                    ? 'secondary'
+                                                                    : 'outline'
+                                                            }
+                                                        >
+                                                            {Number(
+                                                                score.score,
+                                                            ).toFixed(1)}
+                                                            /
+                                                            {
+                                                                score.assessment
+                                                                    .max_score
+                                                            }
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="max-w-sm px-4 py-3 align-top text-muted-foreground">
+                                                        {score.feedback ?? '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
                         </section>
                     </>
                 ) : (
@@ -1068,6 +621,412 @@ export default function GradesIndex({
                     />
                 )}
             </div>
+
+            {canManageGrades && (
+                <>
+                    <Dialog
+                        open={isAssessmentFormOpen}
+                        onOpenChange={(open) => {
+                            setIsAssessmentFormOpen(open);
+
+                            if (!open) {
+                                assessmentForm.clearErrors();
+                            }
+                        }}
+                    >
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Buat komponen nilai</DialogTitle>
+                                <DialogDescription>
+                                    Tambahkan tugas, kuis, praktik, UTS, atau
+                                    UAS sebagai komponen penilaian akademik.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <form
+                                onSubmit={submitAssessment}
+                                className="grid gap-4"
+                            >
+                                <div className="grid gap-2">
+                                    <Label>Judul</Label>
+                                    <Input
+                                        value={assessmentForm.data.title}
+                                        onChange={(event) =>
+                                            assessmentForm.setData(
+                                                'title',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={assessmentForm.errors.title}
+                                    />
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label>Mapel</Label>
+                                        <Select
+                                            value={
+                                                assessmentForm.data.subject_id
+                                            }
+                                            onValueChange={(value) =>
+                                                assessmentForm.setData(
+                                                    'subject_id',
+                                                    value,
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Pilih mapel" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {subjects.map((subject) => (
+                                                    <SelectItem
+                                                        key={subject.id}
+                                                        value={subject.id.toString()}
+                                                    >
+                                                        {subject.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError
+                                            message={
+                                                assessmentForm.errors.subject_id
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label>Kelas</Label>
+                                        <Select
+                                            value={
+                                                assessmentForm.data
+                                                    .school_class_id
+                                            }
+                                            onValueChange={(value) =>
+                                                assessmentForm.setData(
+                                                    'school_class_id',
+                                                    value,
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Pilih kelas" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {schoolClasses.map(
+                                                    (schoolClass) => (
+                                                        <SelectItem
+                                                            key={schoolClass.id}
+                                                            value={schoolClass.id.toString()}
+                                                        >
+                                                            {schoolClass.name}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError
+                                            message={
+                                                assessmentForm.errors
+                                                    .school_class_id
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                    <div className="grid gap-2">
+                                        <Label>Tipe</Label>
+                                        <Select
+                                            value={assessmentForm.data.type}
+                                            onValueChange={(value) =>
+                                                assessmentForm.setData(
+                                                    'type',
+                                                    value,
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {assessmentTypes.map(
+                                                    ([value, label]) => (
+                                                        <SelectItem
+                                                            key={value}
+                                                            value={value}
+                                                        >
+                                                            {label}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError
+                                            message={assessmentForm.errors.type}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label>Skor maks</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={
+                                                assessmentForm.data.max_score
+                                            }
+                                            onChange={(event) =>
+                                                assessmentForm.setData(
+                                                    'max_score',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                assessmentForm.errors.max_score
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label>Bobot %</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={assessmentForm.data.weight}
+                                            onChange={(event) =>
+                                                assessmentForm.setData(
+                                                    'weight',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                assessmentForm.errors.weight
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Tanggal</Label>
+                                    <Input
+                                        type="date"
+                                        value={
+                                            assessmentForm.data.assessment_date
+                                        }
+                                        onChange={(event) =>
+                                            assessmentForm.setData(
+                                                'assessment_date',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={
+                                            assessmentForm.errors
+                                                .assessment_date
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Deskripsi</Label>
+                                    <textarea
+                                        value={assessmentForm.data.description}
+                                        onChange={(event) =>
+                                            assessmentForm.setData(
+                                                'description',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    />
+                                    <InputError
+                                        message={
+                                            assessmentForm.errors.description
+                                        }
+                                    />
+                                </div>
+
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setIsAssessmentFormOpen(false)
+                                        }
+                                    >
+                                        Batal
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={assessmentForm.processing}
+                                    >
+                                        <ClipboardPlus />
+                                        Simpan komponen
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                        open={isScoreFormOpen}
+                        onOpenChange={(open) => {
+                            setIsScoreFormOpen(open);
+
+                            if (!open) {
+                                scoreForm.clearErrors();
+                            }
+                        }}
+                    >
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Input nilai siswa</DialogTitle>
+                                <DialogDescription>
+                                    Pilih komponen akademik dan siswa, lalu
+                                    simpan skor terbaru.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <form onSubmit={submitScore} className="grid gap-4">
+                                <div className="grid gap-2">
+                                    <Label>Komponen</Label>
+                                    <Select
+                                        value={
+                                            scoreForm.data.grade_assessment_id
+                                        }
+                                        onValueChange={(value) =>
+                                            scoreForm.setData((values) => ({
+                                                ...values,
+                                                grade_assessment_id: value,
+                                                student_id: '',
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Pilih komponen" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {assessments.map((assessment) => (
+                                                <SelectItem
+                                                    key={assessment.id}
+                                                    value={assessment.id.toString()}
+                                                >
+                                                    {assessment.title} -{' '}
+                                                    {
+                                                        assessment.school_class
+                                                            .name
+                                                    }
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={
+                                            scoreForm.errors.grade_assessment_id
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Siswa</Label>
+                                    <Select
+                                        value={scoreForm.data.student_id}
+                                        onValueChange={(value) =>
+                                            scoreForm.setData(
+                                                'student_id',
+                                                value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Pilih siswa" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {selectableStudents.map(
+                                                (student) => (
+                                                    <SelectItem
+                                                        key={student.id}
+                                                        value={student.id.toString()}
+                                                    >
+                                                        {student.name}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={scoreForm.errors.student_id}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Skor</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={scoreForm.data.score}
+                                        onChange={(event) =>
+                                            scoreForm.setData(
+                                                'score',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={scoreForm.errors.score}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Feedback</Label>
+                                    <textarea
+                                        value={scoreForm.data.feedback}
+                                        onChange={(event) =>
+                                            scoreForm.setData(
+                                                'feedback',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    />
+                                    <InputError
+                                        message={scoreForm.errors.feedback}
+                                    />
+                                </div>
+
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setIsScoreFormOpen(false)
+                                        }
+                                    >
+                                        Batal
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={scoreForm.processing}
+                                    >
+                                        <Save />
+                                        Simpan nilai
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </>
+            )}
 
             {activeLmsSubmission && (
                 <LmsReviewDialog

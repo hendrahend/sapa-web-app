@@ -53,7 +53,7 @@ const mainNavItems: NavItem[] = [
         permissions: ['grades.view'],
     },
     {
-        title: 'XP & Toko',
+        title: 'XP & Reward',
         href: '/xp',
         icon: Award,
         permissions: ['xp.view', 'rewards.view'],
