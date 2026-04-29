@@ -28,7 +28,7 @@ type Feature = {
 
 const features: Feature[] = [
     {
-        title: 'Absensi GPS + selfie',
+        title: 'Absensi',
         description:
             'Siswa check-in dari perangkatnya sendiri dengan validasi lokasi dan foto. Guru memantau hadir, terlambat, dan yang perlu diverifikasi secara real-time.',
         icon: ClipboardCheck,
@@ -103,14 +103,14 @@ const flows = [
 ];
 
 const metrics = [
-    { label: 'Modul terintegrasi', value: '6' },
-    { label: 'Role akses', value: '4' },
-    { label: 'Validasi absensi', value: 'GPS + Selfie' },
+    { label: 'Basic Feature', value: '3+ Module' },
+    { label: 'XP Reward', value: 'Gamifikasi' },
+    { label: 'AI Implemented', value: 'Asisten AI' },
 ];
 
 const painPoints = [
     'Absensi manual sulit dipantau real-time dan rawan titip absen.',
-    'Rekap nilai tersebar di banyak file Excel berbeda guru.',
+    'Penugasan tersebar di banyak sistem.',
     'Orang tua sering terlambat tahu saat anaknya tidak masuk sekolah.',
     'Motivasi belajar siswa sulit diukur dan dihargai secara sistematis.',
 ];
@@ -284,7 +284,7 @@ function DashboardPreview() {
                                 <div className="flex items-center gap-2">
                                     <MapPin className="size-4" />
                                     <p className="text-sm font-semibold">
-                                        Radius aman
+                                        Radius
                                     </p>
                                 </div>
                                 <div className="mt-6 grid place-items-center">
@@ -391,7 +391,7 @@ export default function Welcome({
                                         SAPA
                                     </span>
                                     <span className="text-xs font-medium text-emerald-800">
-                                        Absensi & Penilaian
+                                        Sistem Absensi & Penilaian
                                     </span>
                                 </span>
                             </Link>
@@ -399,7 +399,7 @@ export default function Welcome({
                             <nav className="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
                                 <a href="#fitur">Fitur</a>
                                 <a href="#alur">Alur</a>
-                                <a href="#demo">Coba demo</a>
+                                <a href="#demo">Demo</a>
                             </nav>
 
                             <div className="flex items-center gap-2">
@@ -459,18 +459,18 @@ export default function Welcome({
                                 </motion.div>
 
                                 <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-tight text-slate-950 md:text-7xl">
-                                    Absensi, nilai, dan kabar
-                                    <br />
+                                    Absensi, nilai, dan kabar {''}
+                                    {/* <br /> */}
                                     <span className="text-emerald-700">
                                         dalam satu sapaan.
                                     </span>
                                 </h1>
                                 <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700 md:text-xl">
-                                    SAPA menggabungkan absensi GPS, penilaian
+                                    SAPA menggabungkan absensi, penilaian
                                     akademik, LMS dengan asisten AI, sistem XP,
-                                    dan notifikasi orang tua — semua dalam satu
+                                    dan notifikasi orang tua, semua dalam satu
                                     aplikasi yang mudah dipakai siswa, guru, dan
-                                    keluarga.
+                                    orang tua.
                                 </p>
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -578,8 +578,8 @@ export default function Welcome({
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
                                 SAPA dirancang untuk menyatukan data yang
-                                biasanya tersebar di buku absensi, file Excel,
-                                dan grup chat — menjadi satu sistem yang
+                                biasanya tersebar di buku absensi, berkas sekolah,
+                                dan grup chat menjadi satu sistem yang
                                 konsisten untuk seluruh keluarga sekolah.
                             </p>
                         </motion.div>
@@ -638,7 +638,7 @@ export default function Welcome({
                                 Fitur utama
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
-                                Bukan sekadar absensi — ekosistem sekolah yang
+                                Bukan sekadar absensi tapi ekosistem sekolah yang
                                 saling terhubung.
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
@@ -926,8 +926,7 @@ export default function Welcome({
                             <span>— Sistem Absensi & Penilaian</span>
                         </div>
                         <p>
-                            Dibuat untuk transformasi digital pendidikan
-                            Indonesia.
+                            Copyright © {new Date().getFullYear()} SAPA. All rights reserved.
                         </p>
                     </div>
                 </footer>
