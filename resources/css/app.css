@@ -153,16 +153,25 @@
     .sapa-page {
         @apply min-h-full bg-background;
         background-image:
-            radial-gradient(circle at 20% 0%, color-mix(in oklch, var(--primary) 18%, transparent) 0, transparent 26rem),
-            radial-gradient(circle at 92% 12%, color-mix(in oklch, var(--ring) 20%, transparent) 0, transparent 24rem);
+            radial-gradient(
+                circle at 20% 0%,
+                color-mix(in oklch, var(--primary) 18%, transparent) 0,
+                transparent 26rem
+            ),
+            radial-gradient(
+                circle at 92% 12%,
+                color-mix(in oklch, var(--ring) 20%, transparent) 0,
+                transparent 24rem
+            );
     }
 
-    .sapa-card {
-        @apply rounded-lg border border-border/80 bg-card text-card-foreground shadow-sm;
-    }
-
+    .sapa-card,
     .sapa-soft-card {
-        @apply rounded-lg border border-border/70 bg-card/80 text-card-foreground shadow-sm backdrop-blur;
+        @apply rounded-lg border border-sidebar-border/70 bg-card text-card-foreground shadow-sm dark:border-sidebar-border;
+    }
+
+    .sapa-panel {
+        @apply rounded-lg border border-sidebar-border/70 dark:border-sidebar-border;
     }
 
     .sapa-gradient {

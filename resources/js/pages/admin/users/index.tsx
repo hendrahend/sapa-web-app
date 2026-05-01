@@ -1,15 +1,12 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import {
-    CheckCircle2,
-    Link2,
-    Plus,
-    ShieldAlert,
-    UserRoundPlus,
-    Users,
-} from 'lucide-react';
+import { Plus, UserRoundPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
+import { ConfirmDelete } from '@/components/sapa/confirm-delete';
+import { DataTablePagination } from '@/components/sapa/data-table-pagination';
+import type { PaginationMeta } from '@/components/sapa/data-table-pagination';
+import { DataTableToolbar } from '@/components/sapa/data-table-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -64,8 +61,17 @@ type SchoolClass = {
     academic_year: string | null;
 };
 
+type Paginated<T> = {
+    data: T[];
+} & PaginationMeta;
+
 type Props = {
-    users: UserRow[];
+    users: Paginated<UserRow>;
+    filters: {
+        search: string;
+        role: string;
+        per_page: number;
+    };
     roles: RoleSummary[];
     schoolClasses: SchoolClass[];
     stats: {
@@ -115,39 +121,15 @@ function formatDate(value: string) {
     }).format(new Date(value));
 }
 
-function statItems(stats: Props['stats']) {
-    return [
-        {
-            label: 'Total pengguna',
-            value: stats.totalUsers,
-            icon: Users,
-        },
-        {
-            label: 'Email terverifikasi',
-            value: stats.verifiedUsers,
-            icon: CheckCircle2,
-        },
-        {
-            label: 'Akun siswa tertaut',
-            value: stats.linkedStudents,
-            icon: Link2,
-        },
-        {
-            label: 'Tanpa role',
-            value: stats.withoutRole,
-            icon: ShieldAlert,
-        },
-    ];
-}
-
 export default function AdminUsersIndex({
     users,
+    filters,
     roles,
     schoolClasses,
-    stats,
 }: Props) {
     const { auth } = usePage().props;
     const canCreateUsers = auth.permissions.includes('users.create');
+    const canDeleteUsers = auth.permissions.includes('users.delete');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const form = useForm<UserForm>(emptyForm);
     const shouldCreateStudentProfile =
@@ -216,25 +198,6 @@ export default function AdminUsersIndex({
                             Tambah pengguna
                         </Button>
                     )}
-                </section>
-
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                        >
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm text-muted-foreground">
-                                    {item.label}
-                                </p>
-                                <item.icon className="size-4 text-muted-foreground" />
-                            </div>
-                            <p className="mt-3 text-2xl font-semibold">
-                                {item.value}
-                            </p>
-                        </div>
-                    ))}
                 </section>
 
                 <Dialog open={isCreateOpen} onOpenChange={changeCreateOpen}>
@@ -509,41 +472,31 @@ export default function AdminUsersIndex({
                     </DialogContent>
                 </Dialog>
 
-                <section className="grid gap-4 xl:grid-cols-[minmax(240px,320px)_1fr]">
-                    <div className="h-fit rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                <section className="grid gap-4">
+                    <div className="sapa-card overflow-hidden">
                         <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                            <h2 className="text-lg font-semibold">
-                                Komposisi role
-                            </h2>
+                            <h2 className="text-lg font-semibold">Pengguna</h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {users.total} pengguna terdaftar di SAPA.
+                            </p>
                         </div>
-                        <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                            {roles.map((role) => (
-                                <div
-                                    key={role.id}
-                                    className="flex items-center justify-between gap-3 p-4"
-                                >
-                                    <div>
-                                        <p className="font-medium">
-                                            {role.label}
-                                        </p>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            {role.name}
-                                        </p>
-                                    </div>
-                                    <Badge variant="secondary">
-                                        {role.users_count}
-                                    </Badge>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
-                        <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                            <h2 className="text-lg font-semibold">
-                                Pengguna terbaru
-                            </h2>
-                        </div>
+                        <DataTableToolbar
+                            path="/admin/users"
+                            searchValue={filters.search}
+                            searchPlaceholder="Cari nama atau email…"
+                            only={['users', 'filters']}
+                            filters={[
+                                {
+                                    name: 'role',
+                                    placeholder: 'Semua role',
+                                    value: filters.role,
+                                    options: roles.map((role) => ({
+                                        value: role.name,
+                                        label: role.label,
+                                    })),
+                                },
+                            ]}
+                        />
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-sidebar-border/70 bg-muted/40 text-muted-foreground dark:border-sidebar-border">
@@ -563,21 +516,25 @@ export default function AdminUsersIndex({
                                         <th className="px-4 py-3 font-medium">
                                             Dibuat
                                         </th>
+                                        <th className="px-4 py-3 text-right font-medium">
+                                            Aksi
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                    {users.length === 0 && (
+                                    {users.data.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={5}
+                                                colSpan={6}
                                                 className="px-4 py-6 text-center text-muted-foreground"
                                             >
-                                                Belum ada pengguna.
+                                                Tidak ada pengguna sesuai
+                                                filter.
                                             </td>
                                         </tr>
                                     )}
 
-                                    {users.map((user) => (
+                                    {users.data.map((user) => (
                                         <tr key={user.id}>
                                             <td className="px-4 py-3 align-top">
                                                 <p className="font-medium">
@@ -653,11 +610,25 @@ export default function AdminUsersIndex({
                                             <td className="px-4 py-3 align-top text-muted-foreground">
                                                 {formatDate(user.created_at)}
                                             </td>
+                                            <td className="px-4 py-3 text-right align-top">
+                                                {canDeleteUsers && (
+                                                    <ConfirmDelete
+                                                        url={`/admin/users/${user.id}`}
+                                                        title="Hapus pengguna?"
+                                                        description={`Akun ${user.name} (${user.email}) dan profil siswa terkait akan dihapus permanen.`}
+                                                        triggerLabel="Hapus"
+                                                    />
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
+                        <DataTablePagination
+                            meta={users}
+                            only={['users', 'filters']}
+                        />
                     </div>
                 </section>
             </div>

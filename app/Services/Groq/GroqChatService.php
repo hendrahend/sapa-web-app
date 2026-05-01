@@ -80,4 +80,53 @@ Pertanyaan atau instruksi pengguna:
 {$message}
 PROMPT;
     }
+
+    /**
+     * Ask Groq for a structured JSON response. Returns the decoded array.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws RequestException
+     */
+    public function askJson(string $systemPrompt, string $userPrompt, int $maxTokens = 1500): array
+    {
+        $apiKey = config('services.groq.key');
+
+        if (! is_string($apiKey) || $apiKey === '') {
+            throw new RuntimeException('GROQ_API_KEY belum diatur.');
+        }
+
+        $baseUrl = rtrim((string) config('services.groq.base_url'), '/');
+
+        $response = Http::withToken($apiKey)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(60)
+            ->post("{$baseUrl}/chat/completions", [
+                'model' => config('services.groq.model', 'llama-3.1-8b-instant'),
+                'messages' => [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user', 'content' => $userPrompt],
+                ],
+                'temperature' => 0.6,
+                'max_completion_tokens' => $maxTokens,
+                'response_format' => ['type' => 'json_object'],
+                'stream' => false,
+            ])
+            ->throw();
+
+        $raw = $response->json('choices.0.message.content');
+
+        if (! is_string($raw) || trim($raw) === '') {
+            throw new RuntimeException('Groq tidak mengembalikan jawaban.');
+        }
+
+        $decoded = json_decode($raw, true);
+
+        if (! is_array($decoded)) {
+            throw new RuntimeException('Groq mengembalikan jawaban yang tidak valid (bukan JSON).');
+        }
+
+        return $decoded;
+    }
 }

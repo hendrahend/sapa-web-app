@@ -98,6 +98,7 @@ function groupLabel(group: string) {
         students: 'Siswa & Orang Tua',
         classes: 'Kelas',
         roles: 'Role & Permission',
+        menus: 'Menu',
         school_locations: 'Lokasi sekolah',
         attendance: 'Absensi',
         grades: 'Penilaian',
@@ -247,10 +248,7 @@ export default function AdminRolesIndex({
 
                 <section className="grid gap-4 md:grid-cols-3">
                     {statItems(stats).map((item) => (
-                        <div
-                            key={item.label}
-                            className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                        >
+                        <div key={item.label} className="sapa-card p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground">
                                     {item.label}
@@ -264,7 +262,7 @@ export default function AdminRolesIndex({
                     ))}
                 </section>
 
-                <section className="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                <section className="sapa-card overflow-hidden">
                     <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
                         <h2 className="text-lg font-semibold">Daftar role</h2>
                     </div>

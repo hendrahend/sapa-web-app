@@ -1,8 +1,12 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Camera,
     CheckCircle2,
     Clock,
+    FileHeart,
+    FileSpreadsheet,
+    FileText,
+    HeartPulse,
     MapPin,
     Navigation,
     Plus,
@@ -10,8 +14,9 @@ import {
     Send,
     ShieldAlert,
     Video,
+    XCircle,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -82,6 +87,7 @@ type AttendanceRecord = {
     distance_from_school_meters: number | null;
     is_within_radius: boolean | null;
     verification_status: string;
+    review_reason?: string;
     session?: {
         id: number;
         title: string;
@@ -89,13 +95,14 @@ type AttendanceRecord = {
     };
 } | null;
 
-type TodayRecord = {
+type AttendanceRecordRow = {
     id: number;
     status: string;
     checked_in_at: string | null;
     distance_from_school_meters: number | null;
     is_within_radius: boolean | null;
     verification_status: string;
+    review_reason?: string;
     student: {
         id: number;
         name: string;
@@ -110,14 +117,40 @@ type TodayRecord = {
     } | null;
 };
 
+type Excuse = {
+    id: number;
+    type: 'izin' | 'sakit';
+    status: 'pending' | 'approved' | 'rejected';
+    start_date: string;
+    end_date: string;
+    reason: string;
+    attachment_url: string | null;
+    admin_notes: string | null;
+    reviewer: { id: number; name: string } | null;
+    student: {
+        id: number;
+        name: string;
+        nis: string | null;
+        school_class: Pick<SchoolClass, 'id' | 'name'> | null;
+    } | null;
+    created_at: string | null;
+};
+
 type Props = {
     schoolClasses: SchoolClass[];
     schoolLocations: SchoolLocation[];
     sessions: AttendanceSession[];
     activeSession: AttendanceSession | null;
     latestRecord: AttendanceRecord;
-    todayRecords: TodayRecord[];
+    attendanceRecords?: AttendanceRecordRow[];
+    todayRecords: AttendanceRecordRow[];
+    reviewRecords: AttendanceRecordRow[];
+    excuses: Excuse[];
     student: Student;
+    filters: {
+        date: string;
+        school_class_id: string;
+    };
     stats: {
         presentToday: number;
         lateToday: number;
@@ -144,6 +177,22 @@ type CheckInForm = {
     selfie: File | null;
 };
 
+type ExcuseForm = {
+    type: 'izin' | 'sakit';
+    start_date: string;
+    end_date: string;
+    reason: string;
+    attachment: File | null;
+};
+
+type ExportForm = {
+    start_date: string;
+    end_date: string;
+    school_class_id: string;
+    status: string;
+    verification_status: string;
+};
+
 type SessionPreset = 'morning' | 'midday' | 'custom';
 
 function today() {
@@ -154,6 +203,14 @@ function formatDate(value: string) {
     return new Intl.DateTimeFormat('id-ID', {
         dateStyle: 'medium',
     }).format(new Date(value));
+}
+
+function dateRange(start: string, end: string) {
+    if (start === end) {
+        return formatDate(start);
+    }
+
+    return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 function formatTime(value: string | null) {
@@ -193,10 +250,47 @@ function statusLabel(status: string) {
     return labels[status] ?? status;
 }
 
+function reviewStatusBadge(status: string) {
+    const className =
+        status === 'pending'
+            ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
+            : status === 'approved'
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
+              : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300';
+
+    return (
+        <Badge variant="outline" className={className}>
+            {statusLabel(status)}
+        </Badge>
+    );
+}
+
+function excuseTypeBadge(type: Excuse['type']) {
+    if (type === 'sakit') {
+        return (
+            <Badge
+                variant="outline"
+                className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+            >
+                <HeartPulse className="mr-1 size-3" /> Sakit
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge
+            variant="outline"
+            className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300"
+        >
+            <FileText className="mr-1 size-3" /> Izin
+        </Badge>
+    );
+}
+
 function statItems(stats: Props['stats']) {
     return [
         {
-            label: 'Hadir hari ini',
+            label: 'Hadir',
             value: stats.presentToday,
             icon: CheckCircle2,
         },
@@ -237,8 +331,12 @@ export default function AttendanceIndex({
     sessions,
     activeSession,
     latestRecord,
+    attendanceRecords,
     todayRecords,
+    reviewRecords,
+    excuses,
     student,
+    filters,
     stats,
 }: Props) {
     const { auth } = usePage().props;
@@ -255,9 +353,23 @@ export default function AttendanceIndex({
     const [locationLoading, setLocationLoading] = useState(false);
     const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
     const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+    const [isExcuseModalOpen, setIsExcuseModalOpen] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [rejectExcuse, setRejectExcuse] = useState<Excuse | null>(null);
+    const [rejectNotes, setRejectNotes] = useState('');
     const [sessionPreset, setSessionPreset] =
         useState<SessionPreset>('morning');
-    const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+    const [selectedDate, setSelectedDate] = useState(filters.date);
+    const [selectedClassFilter, setSelectedClassFilter] = useState(
+        filters.school_class_id,
+    );
+    const [exportForm, setExportForm] = useState<ExportForm>({
+        start_date: filters.date,
+        end_date: filters.date,
+        school_class_id: filters.school_class_id,
+        status: 'all',
+        verification_status: 'all',
+    });
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -281,23 +393,19 @@ export default function AttendanceIndex({
         selfie: null,
     });
 
+    const excuseForm = useForm<ExcuseForm>({
+        type: 'izin',
+        start_date: today(),
+        end_date: today(),
+        reason: '',
+        attachment: null,
+    });
+
     const checkInErrors = checkInForm.errors as typeof checkInForm.errors & {
         student?: string;
     };
 
-    const filteredTodayRecords = useMemo(
-        () =>
-            selectedClassFilter === 'all'
-                ? todayRecords
-                : todayRecords.filter((record) => {
-                      const classId =
-                          record.student?.school_class?.id ??
-                          record.session?.school_class?.id;
-
-                      return classId?.toString() === selectedClassFilter;
-                  }),
-        [selectedClassFilter, todayRecords],
-    );
+    const recordsForSelectedDate = attendanceRecords ?? todayRecords;
 
     useEffect(() => {
         return () => {
@@ -341,6 +449,84 @@ export default function AttendanceIndex({
             forceFormData: true,
             preserveScroll: true,
         });
+    }
+
+    function applyAttendanceFilters(
+        nextDate = selectedDate,
+        nextClass = selectedClassFilter,
+    ) {
+        router.get(
+            '/attendance',
+            {
+                date: nextDate,
+                school_class_id: nextClass === 'all' ? undefined : nextClass,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    }
+
+    function submitExcuse(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        excuseForm.post('/attendance/excuses', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                excuseForm.reset();
+                setIsExcuseModalOpen(false);
+            },
+        });
+    }
+
+    function decideExcuse(
+        excuse: Excuse,
+        status: 'approved' | 'rejected',
+        notes?: string,
+    ) {
+        router.patch(
+            `/attendance/excuses/${excuse.id}`,
+            { status, admin_notes: notes ?? null },
+            { preserveScroll: true },
+        );
+    }
+
+    function verifyRecord(
+        record: AttendanceRecordRow,
+        verificationStatus: 'approved' | 'rejected',
+    ) {
+        router.patch(
+            `/attendance/records/${record.id}/verification`,
+            { verification_status: verificationStatus },
+            { preserveScroll: true },
+        );
+    }
+
+    function runExport() {
+        const params = new URLSearchParams();
+
+        if (exportForm.start_date) {
+            params.set('start_date', exportForm.start_date);
+        }
+
+        if (exportForm.end_date) {
+            params.set('end_date', exportForm.end_date);
+        }
+
+        if (exportForm.school_class_id !== 'all') {
+            params.set('school_class_id', exportForm.school_class_id);
+        }
+
+        if (exportForm.status !== 'all') {
+            params.set('status', exportForm.status);
+        }
+
+        if (exportForm.verification_status !== 'all') {
+            params.set('verification_status', exportForm.verification_status);
+        }
+
+        window.location.href = `/attendance/export?${params.toString()}`;
     }
 
     async function startCamera() {
@@ -437,13 +623,25 @@ export default function AttendanceIndex({
             <Head title="Absensi" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        Kehadiran siswa
-                    </p>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                        Absensi
-                    </h1>
+                <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Kehadiran siswa
+                        </p>
+                        <h1 className="mt-2 text-2xl font-semibold tracking-normal">
+                            Absensi
+                        </h1>
+                    </div>
+                    {canManageAttendance && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsExportModalOpen(true)}
+                        >
+                            <FileSpreadsheet />
+                            Export Excel
+                        </Button>
+                    )}
                 </section>
 
                 {canManageAttendance && (
@@ -493,18 +691,31 @@ export default function AttendanceIndex({
                                                 'Data kelas belum terhubung'}
                                         </p>
                                     </div>
-                                    <Badge
-                                        variant={
-                                            activeSession
-                                                ? 'secondary'
-                                                : 'outline'
-                                        }
-                                        className="w-fit"
-                                    >
-                                        {activeSession
-                                            ? 'Sesi aktif'
-                                            : 'Belum ada sesi'}
-                                    </Badge>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Badge
+                                            variant={
+                                                activeSession
+                                                    ? 'secondary'
+                                                    : 'outline'
+                                            }
+                                            className="w-fit"
+                                        >
+                                            {activeSession
+                                                ? 'Sesi aktif'
+                                                : 'Belum ada sesi'}
+                                        </Badge>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                                setIsExcuseModalOpen(true)
+                                            }
+                                        >
+                                            <FileHeart className="size-4" />
+                                            Izin / Sakit
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="mt-5 grid gap-4">
@@ -722,23 +933,46 @@ export default function AttendanceIndex({
 
                     {canManageAttendance && (
                         <div className="grid gap-4">
-                            <section className="sapa-card overflow-hidden">
-                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
+                            <section className="sapa-card p-4">
+                                <div className="grid gap-3 lg:grid-cols-[1fr_220px_220px_auto] lg:items-end">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">
-                                            Hari ini
+                                            Filter rekap
                                         </p>
                                         <h2 className="mt-1 text-lg font-semibold">
-                                            Murid yang sudah absen
+                                            Lihat absensi per tanggal
                                         </h2>
                                     </div>
-
-                                    <div className="w-full md:w-64">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="attendance-date-filter">
+                                            Tanggal
+                                        </Label>
+                                        <Input
+                                            id="attendance-date-filter"
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(event) => {
+                                                setSelectedDate(
+                                                    event.target.value,
+                                                );
+                                                applyAttendanceFilters(
+                                                    event.target.value,
+                                                    selectedClassFilter,
+                                                );
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Kelas</Label>
                                         <Select
                                             value={selectedClassFilter}
-                                            onValueChange={
-                                                setSelectedClassFilter
-                                            }
+                                            onValueChange={(value) => {
+                                                setSelectedClassFilter(value);
+                                                applyAttendanceFilters(
+                                                    selectedDate,
+                                                    value,
+                                                );
+                                            }}
                                         >
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Filter kelas" />
@@ -760,6 +994,29 @@ export default function AttendanceIndex({
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    <Button
+                                        type="button"
+                                        onClick={openSessionModal}
+                                    >
+                                        <Plus />
+                                        Buat Sesi
+                                    </Button>
+                                </div>
+                            </section>
+
+                            <section className="sapa-card overflow-hidden">
+                                <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            {formatDate(selectedDate)}
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold">
+                                            Murid yang sudah absen
+                                        </h2>
+                                    </div>
+                                    <Badge variant="outline">
+                                        {recordsForSelectedDate.length} record
+                                    </Badge>
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -784,7 +1041,7 @@ export default function AttendanceIndex({
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                                            {filteredTodayRecords.length ===
+                                            {recordsForSelectedDate.length ===
                                                 0 && (
                                                 <tr>
                                                     <td
@@ -797,7 +1054,7 @@ export default function AttendanceIndex({
                                                 </tr>
                                             )}
 
-                                            {filteredTodayRecords.map(
+                                            {recordsForSelectedDate.map(
                                                 (record) => (
                                                     <tr key={record.id}>
                                                         <td className="px-4 py-3 align-top">
@@ -844,25 +1101,34 @@ export default function AttendanceIndex({
                                                                         record.status,
                                                                     )}
                                                                 </Badge>
-                                                                <span className="text-muted-foreground">
-                                                                    {statusLabel(
-                                                                        record.verification_status,
-                                                                    )}
-                                                                </span>
+                                                                {reviewStatusBadge(
+                                                                    record.verification_status,
+                                                                )}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3 align-top">
                                                             <div className="grid gap-1 text-muted-foreground">
-                                                                <span>
-                                                                    {record.distance_from_school_meters ??
-                                                                        '-'}{' '}
-                                                                    m
-                                                                </span>
-                                                                <span>
-                                                                    {record.is_within_radius
-                                                                        ? 'Dalam radius'
-                                                                        : 'Di luar radius'}
-                                                                </span>
+                                                                {record.distance_from_school_meters ===
+                                                                null ? (
+                                                                    <span>
+                                                                        -
+                                                                    </span>
+                                                                ) : (
+                                                                    <span>
+                                                                        {
+                                                                            record.distance_from_school_meters
+                                                                        }{' '}
+                                                                        m
+                                                                    </span>
+                                                                )}
+                                                                {record.is_within_radius !==
+                                                                    null && (
+                                                                    <span>
+                                                                        {record.is_within_radius
+                                                                            ? 'Dalam radius'
+                                                                            : 'Di luar radius'}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -873,28 +1139,225 @@ export default function AttendanceIndex({
                                 </div>
                             </section>
 
+                            <section className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+                                <div className="sapa-card overflow-hidden">
+                                    <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Perlu verifikasi
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold">
+                                            Check-in yang perlu dicek
+                                        </h2>
+                                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                            Biasanya muncul karena lokasi siswa
+                                            di luar radius sekolah atau data
+                                            lokasi belum lengkap.
+                                        </p>
+                                    </div>
+                                    <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
+                                        {reviewRecords.length === 0 && (
+                                            <div className="p-4 text-sm text-muted-foreground">
+                                                Tidak ada check-in yang perlu
+                                                diverifikasi untuk filter ini.
+                                            </div>
+                                        )}
+
+                                        {reviewRecords.map((record) => (
+                                            <div
+                                                key={record.id}
+                                                className="grid gap-3 p-4 md:grid-cols-[1fr_auto]"
+                                            >
+                                                <div>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="font-medium">
+                                                            {record.student
+                                                                ?.name ?? '-'}
+                                                        </p>
+                                                        <Badge variant="outline">
+                                                            {record.session
+                                                                ?.school_class
+                                                                ?.name ??
+                                                                record.student
+                                                                    ?.school_class
+                                                                    ?.name ??
+                                                                '-'}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="mt-2 text-sm text-muted-foreground">
+                                                        {record.session
+                                                            ?.title ?? '-'}{' '}
+                                                        ·{' '}
+                                                        {formatClock(
+                                                            record.checked_in_at,
+                                                        )}
+                                                    </p>
+                                                    <p className="mt-2 text-sm text-muted-foreground">
+                                                        {record.review_reason}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            verifyRecord(
+                                                                record,
+                                                                'approved',
+                                                            )
+                                                        }
+                                                    >
+                                                        <CheckCircle2 className="size-4 text-emerald-500" />
+                                                        Setujui
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            verifyRecord(
+                                                                record,
+                                                                'rejected',
+                                                            )
+                                                        }
+                                                    >
+                                                        <XCircle className="size-4 text-rose-500" />
+                                                        Tolak
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="sapa-card overflow-hidden">
+                                    <div className="border-b border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Izin / sakit
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold">
+                                            Pengajuan di tanggal ini
+                                        </h2>
+                                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                            Disetujui di sini akan otomatis
+                                            masuk sebagai record izin/sakit pada
+                                            sesi kelas yang sesuai.
+                                        </p>
+                                    </div>
+                                    <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
+                                        {excuses.length === 0 && (
+                                            <div className="p-4 text-sm text-muted-foreground">
+                                                Belum ada pengajuan izin/sakit
+                                                pada tanggal ini.
+                                            </div>
+                                        )}
+
+                                        {excuses.map((excuse) => (
+                                            <div
+                                                key={excuse.id}
+                                                className="grid gap-3 p-4"
+                                            >
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {excuseTypeBadge(
+                                                        excuse.type,
+                                                    )}
+                                                    {reviewStatusBadge(
+                                                        excuse.status,
+                                                    )}
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {dateRange(
+                                                            excuse.start_date,
+                                                            excuse.end_date,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {excuse.student?.name ??
+                                                            '-'}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {excuse.student
+                                                            ?.school_class
+                                                            ?.name ?? '-'}
+                                                    </p>
+                                                </div>
+                                                <p className="text-sm leading-6 text-muted-foreground">
+                                                    {excuse.reason}
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {excuse.attachment_url && (
+                                                        <Button
+                                                            asChild
+                                                            size="sm"
+                                                            variant="outline"
+                                                        >
+                                                            <a
+                                                                href={
+                                                                    excuse.attachment_url
+                                                                }
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            >
+                                                                <FileText className="size-4" />
+                                                                Lampiran
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                    {excuse.status ===
+                                                        'pending' && (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    decideExcuse(
+                                                                        excuse,
+                                                                        'approved',
+                                                                    )
+                                                                }
+                                                            >
+                                                                <CheckCircle2 className="size-4 text-emerald-500" />
+                                                                Setujui
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setRejectExcuse(
+                                                                        excuse,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <XCircle className="size-4 text-rose-500" />
+                                                                Tolak
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+
                             <section className="sapa-card overflow-hidden">
                                 <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-sidebar-border">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">
-                                            Guru/Admin
+                                            {formatDate(selectedDate)}
                                         </p>
                                         <h2 className="mt-1 text-lg font-semibold">
                                             Sesi absensi
                                         </h2>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        onClick={openSessionModal}
-                                    >
-                                        <Plus />
-                                        Buat Sesi
-                                    </Button>
+                                    <Badge variant="outline">
+                                        {sessions.length} sesi
+                                    </Badge>
                                 </div>
                                 <div className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                                     {sessions.length === 0 && (
                                         <div className="p-4 text-sm text-muted-foreground">
-                                            Belum ada sesi absensi.
+                                            Belum ada sesi absensi pada tanggal
+                                            ini.
                                         </div>
                                     )}
 
@@ -958,6 +1421,385 @@ export default function AttendanceIndex({
                         </div>
                     )}
                 </section>
+
+                {canCheckIn && (
+                    <Dialog
+                        open={isExcuseModalOpen}
+                        onOpenChange={(open) => {
+                            setIsExcuseModalOpen(open);
+
+                            if (!open) {
+                                excuseForm.reset();
+                                excuseForm.clearErrors();
+                            }
+                        }}
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Ajukan izin / sakit</DialogTitle>
+                                <DialogDescription>
+                                    Kirim pengajuan dari menu Absensi. Setelah
+                                    disetujui guru/admin, data akan masuk ke
+                                    rekap kehadiran.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <form
+                                onSubmit={submitExcuse}
+                                className="grid gap-4"
+                                encType="multipart/form-data"
+                            >
+                                <div className="grid gap-2">
+                                    <Label>Jenis</Label>
+                                    <Select
+                                        value={excuseForm.data.type}
+                                        onValueChange={(value) =>
+                                            excuseForm.setData(
+                                                'type',
+                                                value as ExcuseForm['type'],
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="izin">
+                                                Izin
+                                            </SelectItem>
+                                            <SelectItem value="sakit">
+                                                Sakit
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={excuseForm.errors.type}
+                                    />
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label>Tanggal mulai</Label>
+                                        <Input
+                                            type="date"
+                                            value={excuseForm.data.start_date}
+                                            onChange={(event) =>
+                                                excuseForm.setData(
+                                                    'start_date',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                excuseForm.errors.start_date
+                                            }
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Tanggal selesai</Label>
+                                        <Input
+                                            type="date"
+                                            value={excuseForm.data.end_date}
+                                            onChange={(event) =>
+                                                excuseForm.setData(
+                                                    'end_date',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={excuseForm.errors.end_date}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Alasan</Label>
+                                    <textarea
+                                        rows={3}
+                                        value={excuseForm.data.reason}
+                                        onChange={(event) =>
+                                            excuseForm.setData(
+                                                'reason',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Contoh: demam tinggi, periksa ke dokter."
+                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    />
+                                    <InputError
+                                        message={excuseForm.errors.reason}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Lampiran (opsional)</Label>
+                                    <Input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        onChange={(event) =>
+                                            excuseForm.setData(
+                                                'attachment',
+                                                event.target.files?.[0] ?? null,
+                                            )
+                                        }
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Surat dokter / bukti lain. JPG, PNG,
+                                        WEBP, atau PDF maksimal 4 MB.
+                                    </p>
+                                    <InputError
+                                        message={excuseForm.errors.attachment}
+                                    />
+                                </div>
+
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setIsExcuseModalOpen(false)
+                                        }
+                                    >
+                                        Batal
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={excuseForm.processing}
+                                    >
+                                        Kirim pengajuan
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                )}
+
+                {canManageAttendance && (
+                    <Dialog
+                        open={isExportModalOpen}
+                        onOpenChange={setIsExportModalOpen}
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Export rekap absensi</DialogTitle>
+                                <DialogDescription>
+                                    Pilih rentang tanggal, kelas, status
+                                    kehadiran, dan status verifikasi yang ingin
+                                    dimasukkan ke Excel.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="grid gap-4">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label>Tanggal mulai</Label>
+                                        <Input
+                                            type="date"
+                                            value={exportForm.start_date}
+                                            onChange={(event) =>
+                                                setExportForm((value) => ({
+                                                    ...value,
+                                                    start_date:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Tanggal selesai</Label>
+                                        <Input
+                                            type="date"
+                                            value={exportForm.end_date}
+                                            onChange={(event) =>
+                                                setExportForm((value) => ({
+                                                    ...value,
+                                                    end_date:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Kelas</Label>
+                                    <Select
+                                        value={exportForm.school_class_id}
+                                        onValueChange={(value) =>
+                                            setExportForm((current) => ({
+                                                ...current,
+                                                school_class_id: value,
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Semua kelas
+                                            </SelectItem>
+                                            {schoolClasses.map(
+                                                (schoolClass) => (
+                                                    <SelectItem
+                                                        key={schoolClass.id}
+                                                        value={schoolClass.id.toString()}
+                                                    >
+                                                        {schoolClass.name}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label>Status kehadiran</Label>
+                                        <Select
+                                            value={exportForm.status}
+                                            onValueChange={(value) =>
+                                                setExportForm((current) => ({
+                                                    ...current,
+                                                    status: value,
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    Semua status
+                                                </SelectItem>
+                                                <SelectItem value="hadir">
+                                                    Hadir
+                                                </SelectItem>
+                                                <SelectItem value="terlambat">
+                                                    Terlambat
+                                                </SelectItem>
+                                                <SelectItem value="izin">
+                                                    Izin
+                                                </SelectItem>
+                                                <SelectItem value="sakit">
+                                                    Sakit
+                                                </SelectItem>
+                                                <SelectItem value="alfa">
+                                                    Alfa
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Verifikasi</Label>
+                                        <Select
+                                            value={
+                                                exportForm.verification_status
+                                            }
+                                            onValueChange={(value) =>
+                                                setExportForm((current) => ({
+                                                    ...current,
+                                                    verification_status: value,
+                                                }))
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    Semua
+                                                </SelectItem>
+                                                <SelectItem value="pending">
+                                                    Menunggu
+                                                </SelectItem>
+                                                <SelectItem value="approved">
+                                                    Disetujui
+                                                </SelectItem>
+                                                <SelectItem value="rejected">
+                                                    Ditolak
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsExportModalOpen(false)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button type="button" onClick={runExport}>
+                                    <FileSpreadsheet />
+                                    Export
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
+
+                {canManageAttendance && (
+                    <Dialog
+                        open={rejectExcuse !== null}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setRejectExcuse(null);
+                                setRejectNotes('');
+                            }
+                        }}
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Tolak pengajuan</DialogTitle>
+                                <DialogDescription>
+                                    Tambahkan catatan singkat agar siswa tahu
+                                    alasan pengajuan belum bisa disetujui.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <textarea
+                                rows={3}
+                                value={rejectNotes}
+                                onChange={(event) =>
+                                    setRejectNotes(event.target.value)
+                                }
+                                placeholder="Contoh: bukti belum jelas."
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            />
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setRejectExcuse(null)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        if (rejectExcuse) {
+                                            decideExcuse(
+                                                rejectExcuse,
+                                                'rejected',
+                                                rejectNotes,
+                                            );
+                                        }
+
+                                        setRejectExcuse(null);
+                                        setRejectNotes('');
+                                    }}
+                                >
+                                    Tolak pengajuan
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
 
                 {canManageAttendance && (
                     <Dialog

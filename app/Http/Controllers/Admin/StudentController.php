@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SystemPermission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentRequest;
@@ -9,21 +10,36 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class StudentController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = trim((string) $request->string('search'));
+        $classFilter = trim((string) $request->string('school_class_id'));
+        $statusFilter = trim((string) $request->string('status'));
+        $perPage = (int) $request->integer('per_page', 15);
+        $perPage = max(5, min(100, $perPage));
+
         $students = Student::query()
             ->with(['user:id,name,email', 'schoolClass:id,name', 'parentUsers:id,name,email'])
             ->withCount('attendanceRecords')
+            ->when($search !== '', fn ($query) => $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('nis', 'like', "%{$search}%")
+                    ->orWhere('nisn', 'like', "%{$search}%");
+            }))
+            ->when($classFilter !== '', fn ($query) => $query->where('school_class_id', $classFilter))
+            ->when($statusFilter === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($statusFilter === 'inactive', fn ($query) => $query->where('is_active', false))
             ->latest('id')
-            ->limit(50)
-            ->get()
-            ->map(fn (Student $student) => [
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn (Student $student) => [
                 'id' => $student->id,
                 'user_id' => $student->user_id,
                 'school_class_id' => $student->school_class_id,
@@ -54,6 +70,12 @@ class StudentController extends Controller
 
         return Inertia::render('admin/students/index', [
             'students' => $students,
+            'filters' => [
+                'search' => $search,
+                'school_class_id' => $classFilter,
+                'status' => $statusFilter,
+                'per_page' => $perPage,
+            ],
             'schoolClasses' => SchoolClass::query()
                 ->where('is_active', true)
                 ->orderBy('name')
@@ -107,6 +129,18 @@ class StudentController extends Controller
         return to_route('admin.students.index');
     }
 
+    public function destroy(Request $request, Student $student): RedirectResponse
+    {
+        abort_unless($request->user()?->can(SystemPermission::DeleteStudents->value), 403);
+
+        $student->parentUsers()->detach();
+        $student->delete();
+
+        $this->successToast('Data siswa berhasil dihapus.');
+
+        return to_route('admin.students.index');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -134,20 +168,15 @@ class StudentController extends Controller
 
         if ($request->filled('new_parent_email')) {
             $parent = User::create([
-                'name' => $request->string('new_parent_name')->toString(),
-                'email' => $request->string('new_parent_email')->lower()->toString(),
+                'name' => $request->validated('new_parent_name'),
+                'email' => $request->validated('new_parent_email'),
+                'password' => Hash::make($request->validated('new_parent_password') ?: 'password'),
                 'email_verified_at' => now(),
-                'password' => Hash::make('password'),
             ]);
 
-            $parent->assignRole(UserRole::Parent->value);
-            $parentIds->push($parent->id);
+            $parent->syncRoles([UserRole::Parent->value]);
+            $parentIds = $parentIds->push($parent->id);
         }
-
-        User::query()
-            ->whereIn('id', $parentIds)
-            ->get()
-            ->each(fn (User $parent) => $parent->assignRole(UserRole::Parent->value));
 
         $student->parentUsers()->sync($parentIds->unique()->values()->all());
     }

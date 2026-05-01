@@ -109,10 +109,7 @@ export default function SchoolLocationIndex({ location }: Props) {
             <Head title="Lokasi Sekolah" />
 
             <div className="grid h-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
-                <form
-                    onSubmit={submit}
-                    className="h-fit rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border"
-                >
+                <form onSubmit={submit} className="sapa-card h-fit p-4">
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">
                             Absensi radius

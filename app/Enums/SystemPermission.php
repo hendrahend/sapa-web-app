@@ -19,10 +19,20 @@ enum SystemPermission: string
     case UpdateClasses = 'classes.update';
     case DeleteClasses = 'classes.delete';
 
+    case ViewSubjects = 'subjects.view';
+    case CreateSubjects = 'subjects.create';
+    case UpdateSubjects = 'subjects.update';
+    case DeleteSubjects = 'subjects.delete';
+
     case ViewRoles = 'roles.view';
     case CreateRoles = 'roles.create';
     case UpdateRoles = 'roles.update';
     case DeleteRoles = 'roles.delete';
+
+    case ViewMenus = 'menus.view';
+    case CreateMenus = 'menus.create';
+    case UpdateMenus = 'menus.update';
+    case DeleteMenus = 'menus.delete';
 
     case ViewSchoolLocations = 'school_locations.view';
     case CreateSchoolLocations = 'school_locations.create';
@@ -58,4 +68,8 @@ enum SystemPermission: string
     case CreateNotifications = 'notifications.create';
     case UpdateNotifications = 'notifications.update';
     case DeleteNotifications = 'notifications.delete';
+
+    case ViewRewards = 'rewards.view';
+    case ManageRewards = 'rewards.manage';
+    case RedeemRewards = 'rewards.redeem';
 }

@@ -1,23 +1,35 @@
 <?php
 
+use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\SchoolClassController;
 use App\Http\Controllers\Admin\SchoolLocationController;
 use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Attendance\AttendanceCheckInController;
 use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\Attendance\AttendanceExcuseController;
 use App\Http\Controllers\Attendance\AttendanceSessionController;
+use App\Http\Controllers\ClassInsightController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Exports\AttendanceExportController;
+use App\Http\Controllers\Exports\GradeExportController;
 use App\Http\Controllers\Grades\GradeAssessmentController;
 use App\Http\Controllers\Grades\GradeController;
 use App\Http\Controllers\Grades\GradeScoreController;
 use App\Http\Controllers\Lms\LmsAiChatController;
+use App\Http\Controllers\Lms\LmsAiToolsController;
 use App\Http\Controllers\Lms\LmsAssignmentController;
 use App\Http\Controllers\Lms\LmsController;
 use App\Http\Controllers\Lms\LmsCourseController;
+use App\Http\Controllers\Lms\LmsGradingController;
 use App\Http\Controllers\Lms\LmsMaterialController;
 use App\Http\Controllers\Lms\LmsSubmissionController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Rewards\RewardController;
+use App\Http\Controllers\XpController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -25,107 +37,150 @@ Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'menu.permission'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-    Route::get('attendance', [AttendanceController::class, 'index'])
-        ->middleware('permission:attendance.view|attendance.own.view')
-        ->name('attendance.index');
+    Route::resource('attendance', AttendanceController::class)
+        ->only('index');
 
-    Route::resource('attendance/sessions', AttendanceSessionController::class)
-        ->only('store')
-        ->names('attendance.sessions')
-        ->middleware('permission:attendance.create');
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::resource('sessions', AttendanceSessionController::class)
+            ->only('store');
 
-    Route::post('attendance/check-in', [AttendanceCheckInController::class, 'store'])
-        ->middleware('permission:attendance.own.create')
-        ->name('attendance.check-in.store');
+        Route::post('check-in', [AttendanceCheckInController::class, 'store'])
+            ->name('check-in.store');
 
-    Route::get('grades', [GradeController::class, 'index'])
-        ->middleware('permission:grades.view')
-        ->name('grades.index');
+        Route::patch('records/{record}/verification', [AttendanceController::class, 'verifyRecord'])
+            ->name('records.verify');
 
-    Route::resource('grades/assessments', GradeAssessmentController::class)
-        ->only('store')
-        ->names('grades.assessments')
-        ->middleware('permission:grades.create');
+        Route::resource('excuses', AttendanceExcuseController::class)
+            ->only(['index', 'store']);
 
-    Route::resource('grades/scores', GradeScoreController::class)
-        ->only('store')
-        ->names('grades.scores')
-        ->middleware('permission:grades.create|grades.update');
+        Route::patch('excuses/{excuse}', [AttendanceExcuseController::class, 'decide'])
+            ->name('excuses.decide');
 
-    Route::get('lms', [LmsController::class, 'index'])
-        ->middleware('permission:lms.view')
-        ->name('lms.index');
+        Route::get('export', AttendanceExportController::class)
+            ->name('export');
+    });
 
-    Route::resource('lms/ai/chat', LmsAiChatController::class)
-        ->only('store')
-        ->names('lms.ai.chat')
-        ->middleware('permission:lms.view');
+    Route::resource('grades', GradeController::class)
+        ->only('index');
 
-    Route::resource('lms/courses', LmsCourseController::class)
-        ->only('store')
-        ->names('lms.courses')
-        ->middleware('permission:lms.create');
+    Route::prefix('grades')->name('grades.')->group(function () {
+        Route::get('export', GradeExportController::class)
+            ->name('export');
 
-    Route::resource('lms/materials', LmsMaterialController::class)
-        ->only('store')
-        ->names('lms.materials')
-        ->middleware('permission:lms.create');
+        Route::resource('assessments', GradeAssessmentController::class)
+            ->only('store');
 
-    Route::resource('lms/assignments', LmsAssignmentController::class)
-        ->only('store')
-        ->names('lms.assignments')
-        ->middleware('permission:lms.create');
+        Route::resource('scores', GradeScoreController::class)
+            ->only('store');
+    });
 
-    Route::resource('lms/assignments.submissions', LmsSubmissionController::class)
-        ->only('store')
-        ->names('lms.assignments.submissions')
-        ->middleware('permission:lms.assignments.submit');
+    Route::get('class-insights', [ClassInsightController::class, 'index'])
+        ->name('class-insights.index');
 
-    Route::inertia('xp', 'xp/index')
-        ->middleware('permission:xp.view')
-        ->name('xp.index');
+    Route::post('class-insights', [ClassInsightController::class, 'store'])
+        ->name('class-insights.store');
 
-    Route::inertia('notifications', 'notifications/index')
-        ->middleware('permission:notifications.view')
-        ->name('notifications.index');
+    Route::resource('lms', LmsController::class)
+        ->only('index');
 
-    Route::resource('admin/users', UserController::class)
-        ->only(['index', 'store'])
-        ->names('admin.users')
-        ->middlewareFor('index', 'permission:users.view')
-        ->middlewareFor('store', 'permission:users.create');
+    Route::prefix('lms')->name('lms.')->group(function () {
+        Route::prefix('ai')->name('ai.')->group(function () {
+            Route::resource('chat', LmsAiChatController::class)
+                ->only(['index', 'store']);
 
-    Route::resource('admin/students', StudentController::class)
-        ->only(['index', 'store', 'update'])
-        ->names('admin.students')
-        ->middlewareFor('index', 'permission:students.view')
-        ->middlewareFor('store', 'permission:students.create')
-        ->middlewareFor('update', 'permission:students.update');
+            Route::get('tools', [LmsAiToolsController::class, 'index'])
+                ->name('tools');
 
-    Route::resource('admin/classes', SchoolClassController::class)
-        ->only(['index', 'store', 'update'])
-        ->parameters(['classes' => 'schoolClass'])
-        ->names('admin.classes')
-        ->middlewareFor('index', 'permission:classes.view')
-        ->middlewareFor('store', 'permission:classes.create')
-        ->middlewareFor('update', 'permission:classes.update');
+            Route::post('tools/rubrik', [LmsAiToolsController::class, 'rubrik'])
+                ->name('tools.rubrik');
 
-    Route::resource('admin/roles', RolePermissionController::class)
-        ->only(['index', 'store', 'update', 'destroy'])
-        ->names('admin.roles')
-        ->middlewareFor('index', 'permission:roles.view')
-        ->middlewareFor('store', 'permission:roles.create')
-        ->middlewareFor('update', 'permission:roles.update')
-        ->middlewareFor('destroy', 'permission:roles.delete');
+            Route::post('tools/soal', [LmsAiToolsController::class, 'soal'])
+                ->name('tools.soal');
+        });
 
-    Route::resource('admin/school-location', SchoolLocationController::class)
-        ->only(['index', 'store'])
-        ->names('admin.school-location')
-        ->middlewareFor('index', 'permission:school_locations.view')
-        ->middlewareFor('store', 'permission:school_locations.create|school_locations.update');
+        Route::get('grading', fn (Request $request) => redirect()->route('grades.index', [
+            'grade_tab' => 'lms',
+            'lms_tab' => $request->string('tab')->toString() === 'graded' ? 'graded' : 'pending',
+        ]))->name('grading.index');
+
+        Route::post('grading/{submission}/ai', [LmsGradingController::class, 'aiGrade'])
+            ->name('grading.ai');
+
+        Route::patch('grading/{submission}', [LmsGradingController::class, 'update'])
+            ->name('grading.update');
+
+        Route::resource('courses', LmsCourseController::class)
+            ->only('store');
+
+        Route::resource('materials', LmsMaterialController::class)
+            ->only('store');
+
+        Route::resource('assignments', LmsAssignmentController::class)
+            ->only('store');
+
+        Route::resource('assignments.submissions', LmsSubmissionController::class)
+            ->only('store');
+    });
+
+    Route::resource('xp', XpController::class)
+        ->only('index');
+
+    Route::resource('notifications', NotificationController::class)
+        ->only('index');
+
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])
+        ->name('notifications.read');
+
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->name('notifications.read-all');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::resource('users', UserController::class)
+            ->only(['index', 'store', 'destroy']);
+
+        Route::resource('students', StudentController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::resource('classes', SchoolClassController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->parameters(['classes' => 'schoolClass']);
+
+        Route::resource('subjects', SubjectController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::resource('roles', RolePermissionController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::resource('menus', MenuController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
+        Route::resource('school-location', SchoolLocationController::class)
+            ->only(['index', 'store']);
+
+        Route::get('rewards', [RewardController::class, 'adminIndex'])
+            ->name('rewards.index');
+
+        Route::post('rewards', [RewardController::class, 'adminStore'])
+            ->name('rewards.store');
+
+        Route::patch('rewards/{reward}', [RewardController::class, 'adminUpdate'])
+            ->name('rewards.update');
+
+        Route::delete('rewards/{reward}', [RewardController::class, 'adminDestroy'])
+            ->name('rewards.destroy');
+
+        Route::patch('rewards/redemptions/{redemption}', [RewardController::class, 'adminDecide'])
+            ->name('rewards.redemptions.decide');
+    });
+
+    Route::get('rewards', fn () => redirect()->route('xp.index', ['tab' => 'rewards']))
+        ->name('rewards.index');
+
+    Route::post('rewards/{reward}/redeem', [RewardController::class, 'store'])
+        ->name('rewards.redeem');
 });
 
 require __DIR__.'/settings.php';

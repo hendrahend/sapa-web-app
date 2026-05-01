@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SystemPermission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserRequest;
@@ -9,6 +10,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,8 +18,13 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = trim((string) $request->string('search'));
+        $roleFilter = trim((string) $request->string('role'));
+        $perPage = (int) $request->integer('per_page', 15);
+        $perPage = max(5, min(100, $perPage));
+
         $roles = Role::query()
             ->withCount('users')
             ->orderBy('name')
@@ -26,10 +33,15 @@ class UserController extends Controller
         $users = User::query()
             ->with(['roles:id,name', 'student.schoolClass:id,name'])
             ->withCount(['createdAttendanceSessions', 'verifiedAttendanceRecords'])
+            ->when($search !== '', fn ($query) => $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            }))
+            ->when($roleFilter !== '', fn ($query) => $query->whereHas('roles', fn ($q) => $q->where('name', $roleFilter)))
             ->latest('id')
-            ->limit(25)
-            ->get()
-            ->map(fn (User $user) => [
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -50,6 +62,11 @@ class UserController extends Controller
 
         return Inertia::render('admin/users/index', [
             'users' => $users,
+            'filters' => [
+                'search' => $search,
+                'role' => $roleFilter,
+                'per_page' => $perPage,
+            ],
             'roles' => $roles->map(fn (Role $role) => [
                 'id' => $role->id,
                 'name' => $role->name,
@@ -95,6 +112,30 @@ class UserController extends Controller
         }
 
         $this->successToast('Pengguna berhasil ditambahkan.');
+
+        return to_route('admin.users.index');
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user()?->can(SystemPermission::DeleteUsers->value), 403);
+
+        if ($user->id === $request->user()?->id) {
+            $this->errorToast('Tidak bisa menghapus akun yang sedang login.');
+
+            return back();
+        }
+
+        if ($user->hasRole(UserRole::Admin->value) && User::role(UserRole::Admin->value)->count() <= 1) {
+            $this->errorToast('Minimal harus ada satu admin aktif.');
+
+            return back();
+        }
+
+        $user->student?->delete();
+        $user->delete();
+
+        $this->successToast('Pengguna berhasil dihapus.');
 
         return to_route('admin.users.index');
     }

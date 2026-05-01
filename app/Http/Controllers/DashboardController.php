@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\UserRole;
 use App\Models\AttendanceRecord;
 use App\Models\AttendanceSession;
 use App\Models\GradeAssessment;
@@ -11,7 +12,10 @@ use App\Models\LmsAssignment;
 use App\Models\LmsCourse;
 use App\Models\LmsMaterial;
 use App\Models\LmsSubmission;
+use App\Models\RewardRedemption;
 use App\Models\Student;
+use App\Models\User;
+use App\Services\Xp\XpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -19,21 +23,36 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly XpService $xp) {}
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
         $student = $user?->student()->with('schoolClass:id,name')->first();
+        $role = $this->resolveRole($user);
+
+        $progress = $student
+            ? $this->xp->progressFor($student)
+            : ['xp' => 0, 'level' => 1, 'level_size' => $this->xp->levelThreshold(), 'percent' => 0];
 
         return Inertia::render('dashboard', [
+            'role' => $role,
             'overview' => [
                 'weeklyGoal' => $this->weeklyGoal($student),
-                'level' => $this->level($student),
-                'xp' => $this->xp($student),
-                'xpToNextLevel' => 160,
+                'level' => $progress['level'],
+                'xp' => $progress['xp'],
+                'xpToNextLevel' => (int) $progress['level_size'],
             ],
             'attendance' => $this->attendance($student),
             'assessment' => $this->assessment($student),
-            'leaderboard' => $this->leaderboard(),
+            'leaderboard' => $this->xp->leaderboard(5)
+                ->map(fn (array $row) => [
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'className' => $row['class_name'],
+                    'xp' => $row['xp'],
+                ])
+                ->all(),
             'progress' => $this->progress(),
             'lms' => $this->lms($student),
             'stats' => [
@@ -43,7 +62,24 @@ class DashboardController extends Controller
                 'activeCourses' => LmsCourse::query()->where('is_active', true)->count(),
             ],
             'student' => $student,
+            'staff' => in_array($role, ['admin', 'guru'], true) ? $this->staff($user, $role) : null,
+            'parentSummary' => $role === 'orang_tua' ? $this->parentSummary($user) : null,
         ]);
+    }
+
+    private function resolveRole(?User $user): string
+    {
+        if (! $user) {
+            return 'siswa';
+        }
+
+        foreach ([UserRole::Admin, UserRole::Teacher, UserRole::Parent, UserRole::Student] as $role) {
+            if ($user->hasRole($role->value)) {
+                return $role->value;
+            }
+        }
+
+        return 'siswa';
     }
 
     private function weeklyGoal(?Student $student): int
@@ -66,34 +102,6 @@ class DashboardController extends Controller
             ->count();
 
         return (int) min(100, round(($total / 5) * 100));
-    }
-
-    private function xp(?Student $student): int
-    {
-        $attendanceQuery = AttendanceRecord::query();
-        $scoreQuery = GradeScore::query();
-
-        if ($student) {
-            $attendanceQuery->where('student_id', $student->id);
-            $scoreQuery->where('student_id', $student->id);
-        }
-
-        $presentXp = (clone $attendanceQuery)
-            ->where('status', AttendanceStatus::Present->value)
-            ->count() * 20;
-        $lateXp = (clone $attendanceQuery)
-            ->where('status', AttendanceStatus::Late->value)
-            ->count() * 10;
-        $scoreXp = (clone $scoreQuery)
-            ->where('score', '>=', 75)
-            ->count() * 30;
-
-        return $presentXp + $lateXp + $scoreXp;
-    }
-
-    private function level(?Student $student): int
-    {
-        return max(1, (int) floor($this->xp($student) / 160) + 1);
     }
 
     /**
@@ -157,50 +165,35 @@ class DashboardController extends Controller
     }
 
     /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function leaderboard(): array
-    {
-        return Student::query()
-            ->where('is_active', true)
-            ->with('schoolClass:id,name')
-            ->withCount([
-                'attendanceRecords as present_count' => fn ($query) => $query->where('status', AttendanceStatus::Present->value),
-                'attendanceRecords as late_count' => fn ($query) => $query->where('status', AttendanceStatus::Late->value),
-                'gradeScores as strong_scores_count' => fn ($query) => $query->where('score', '>=', 75),
-            ])
-            ->limit(8)
-            ->get()
-            ->map(fn (Student $student) => [
-                'id' => $student->id,
-                'name' => $student->name,
-                'className' => $student->schoolClass?->name,
-                'xp' => ($student->present_count * 20) + ($student->late_count * 10) + ($student->strong_scores_count * 30),
-            ])
-            ->sortByDesc('xp')
-            ->values()
-            ->take(5)
-            ->all();
-    }
-
-    /**
      * @return array<int, array<string, int|string>>
      */
     private function progress(): array
     {
+        $start = now()->subDays(6)->startOfDay();
+        $end = now()->endOfDay();
+
+        $attendanceCounts = AttendanceRecord::query()
+            ->selectRaw('date(checked_in_at) as bucket, count(*) as total')
+            ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
+            ->whereBetween('checked_in_at', [$start, $end])
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        $scoreCounts = GradeScore::query()
+            ->selectRaw('date(graded_at) as bucket, count(*) as total')
+            ->whereBetween('graded_at', [$start, $end])
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
         return collect(range(6, 0))
-            ->map(function (int $daysAgo) {
+            ->map(function (int $daysAgo) use ($attendanceCounts, $scoreCounts) {
                 $date = now()->subDays($daysAgo);
+                $key = $date->toDateString();
 
                 return [
                     'label' => $date->translatedFormat('D'),
-                    'attendance' => AttendanceRecord::query()
-                        ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
-                        ->whereDate('checked_in_at', $date->toDateString())
-                        ->count(),
-                    'scores' => GradeScore::query()
-                        ->whereDate('graded_at', $date->toDateString())
-                        ->count(),
+                    'attendance' => (int) ($attendanceCounts[$key] ?? 0),
+                    'scores' => (int) ($scoreCounts[$key] ?? 0),
                 ];
             })
             ->all();
@@ -247,6 +240,101 @@ class DashboardController extends Controller
                 'course' => $assignment->course?->title,
                 'dueAt' => $assignment->due_at,
             ] : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function staff(User $user, string $role): array
+    {
+        $today = now()->toDateString();
+        $totalStudents = Student::query()->where('is_active', true)->count();
+
+        $todayCheckedIn = AttendanceRecord::query()
+            ->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])
+            ->whereDate('checked_in_at', $today)
+            ->count();
+
+        $sessionsOpen = AttendanceSession::query()
+            ->where('status', 'open')
+            ->whereDate('attendance_date', $today)
+            ->count();
+
+        $pendingGrading = LmsSubmission::query()
+            ->whereNotNull('submitted_at')
+            ->whereNull('graded_at')
+            ->count();
+
+        $pendingRedemptions = RewardRedemption::query()
+            ->where('status', 'pending')
+            ->count();
+
+        $teacherClasses = $role === 'guru'
+            ? LmsCourse::query()
+                ->where('teacher_id', $user->id)
+                ->where('is_active', true)
+                ->count()
+            : null;
+
+        return [
+            'role' => $role,
+            'today' => [
+                'sessionsOpen' => $sessionsOpen,
+                'attendanceCount' => $todayCheckedIn,
+                'totalStudents' => $totalStudents,
+                'attendanceRate' => $totalStudents > 0
+                    ? (int) round(($todayCheckedIn / $totalStudents) * 100)
+                    : 0,
+            ],
+            'pendingGrading' => $pendingGrading,
+            'pendingRedemptions' => $pendingRedemptions,
+            'teacherCourseCount' => $teacherClasses,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parentSummary(User $user): array
+    {
+        $children = $user->children()
+            ->with(['schoolClass:id,name'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (Student $child) {
+                $todayRecord = AttendanceRecord::query()
+                    ->where('student_id', $child->id)
+                    ->whereDate('checked_in_at', now()->toDateString())
+                    ->latest('checked_in_at')
+                    ->first();
+
+                $latestScore = GradeScore::query()
+                    ->with(['assessment.subject:id,name,code'])
+                    ->where('student_id', $child->id)
+                    ->latest('graded_at')
+                    ->first();
+
+                return [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'className' => $child->schoolClass?->name,
+                    'todayStatus' => $todayRecord?->status?->value,
+                    'todayCheckedInAt' => optional($todayRecord?->checked_in_at)->toIso8601String(),
+                    'latestScore' => $latestScore ? [
+                        'value' => (float) $latestScore->score,
+                        'subject' => $latestScore->assessment?->subject?->name,
+                        'gradedAt' => optional($latestScore->graded_at)->toIso8601String(),
+                    ] : null,
+                ];
+            })
+            ->all();
+
+        $unread = (int) $user->unreadNotifications()->count();
+
+        return [
+            'children' => $children,
+            'unreadNotifications' => $unread,
         ];
     }
 }
