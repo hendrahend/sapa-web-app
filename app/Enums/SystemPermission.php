@@ -19,6 +19,11 @@ enum SystemPermission: string
     case UpdateClasses = 'classes.update';
     case DeleteClasses = 'classes.delete';
 
+    case ViewSubjects = 'subjects.view';
+    case CreateSubjects = 'subjects.create';
+    case UpdateSubjects = 'subjects.update';
+    case DeleteSubjects = 'subjects.delete';
+
     case ViewRoles = 'roles.view';
     case CreateRoles = 'roles.create';
     case UpdateRoles = 'roles.update';

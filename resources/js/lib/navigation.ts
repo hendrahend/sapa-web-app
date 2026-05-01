@@ -2,6 +2,7 @@ import {
     Award,
     Bell,
     BarChart3,
+    BookMarked,
     BookOpen,
     ClipboardCheck,
     GraduationCap,
@@ -22,6 +23,7 @@ const iconMap: Record<string, LucideIcon> = {
     Award,
     Bell,
     BarChart3,
+    BookMarked,
     BookOpen,
     ClipboardCheck,
     GraduationCap,
@@ -98,6 +100,12 @@ const adminNavItems: NavItem[] = [
         href: '/admin/classes',
         icon: School,
         permissions: ['classes.view'],
+    },
+    {
+        title: 'Mapel',
+        href: '/admin/subjects',
+        icon: BookMarked,
+        permissions: ['subjects.view'],
     },
     {
         title: 'Role & Permission',

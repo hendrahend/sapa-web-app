@@ -95,32 +95,39 @@ class MenuSeeder extends Seeder
             'order' => 30,
         ]);
 
+        $this->menuByRoute('/admin/subjects', $admin->id, [
+            'title' => 'Mapel',
+            'icon' => 'BookMarked',
+            'permission_name' => SystemPermission::ViewSubjects->value,
+            'order' => 40,
+        ]);
+
         $this->menu('Role & Permission', $admin->id, [
             'route' => '/admin/roles',
             'icon' => 'ShieldCheck',
             'permission_name' => SystemPermission::ViewRoles->value,
-            'order' => 40,
+            'order' => 50,
         ]);
 
         $this->menu('Lokasi Sekolah', $admin->id, [
             'route' => '/admin/school-location',
             'icon' => 'MapPinned',
             'permission_name' => SystemPermission::ViewSchoolLocations->value,
-            'order' => 50,
+            'order' => 60,
         ]);
 
         $this->menu('Kelola Reward', $admin->id, [
             'route' => '/admin/rewards',
             'icon' => 'Store',
             'permission_name' => SystemPermission::ManageRewards->value,
-            'order' => 60,
+            'order' => 70,
         ]);
 
         $this->menuByTitle('Menu Manager', $admin->id, [
             'route' => '/admin/menus',
             'icon' => 'Menu',
             'permission_name' => SystemPermission::ViewMenus->value,
-            'order' => 70,
+            'order' => 80,
         ]);
 
         Menu::query()

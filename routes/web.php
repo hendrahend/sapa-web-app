@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\SchoolClassController;
 use App\Http\Controllers\Admin\SchoolLocationController;
 use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Attendance\AttendanceCheckInController;
 use App\Http\Controllers\Attendance\AttendanceController;
@@ -146,6 +147,9 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->group(function () {
         Route::resource('classes', SchoolClassController::class)
             ->only(['index', 'store', 'update', 'destroy'])
             ->parameters(['classes' => 'schoolClass']);
+
+        Route::resource('subjects', SubjectController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
         Route::resource('roles', RolePermissionController::class)
             ->only(['index', 'store', 'update', 'destroy']);
