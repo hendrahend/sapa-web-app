@@ -143,7 +143,7 @@ function TabButton({
     );
 }
 
-function RubrikPanel({ disabled }: { disabled: boolean }) {
+export function RubrikPanel({ disabled }: { disabled: boolean }) {
     const [form, setForm] = useState({
         description: '',
         subject: '',
@@ -404,7 +404,7 @@ function RubrikPanel({ disabled }: { disabled: boolean }) {
     );
 }
 
-function SoalPanel({ disabled }: { disabled: boolean }) {
+export function SoalPanel({ disabled }: { disabled: boolean }) {
     const [form, setForm] = useState({
         topic: '',
         subject: '',

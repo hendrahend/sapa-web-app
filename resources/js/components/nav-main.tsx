@@ -7,6 +7,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { resolveNavIcon } from '@/lib/navigation';
 import type { NavItem } from '@/types';
 
 export function NavMain({
@@ -26,28 +27,33 @@ export function NavMain({
         <SidebarGroup className="px-2 py-0">
             <SidebarGroupLabel>{label}</SidebarGroupLabel>
             <SidebarMenu>
-                {items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                            asChild
-                            isActive={isCurrentUrl(item.href)}
-                            tooltip={{ children: item.title }}
-                        >
-                            <Link href={item.href} prefetch>
-                                {item.icon && <item.icon />}
-                                <span>{item.title}</span>
-                                {item.badge != null && item.badge !== '' && (
-                                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">
-                                        {typeof item.badge === 'number' &&
-                                        item.badge > 99
-                                            ? '99+'
-                                            : item.badge}
-                                    </span>
-                                )}
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
+                {items.map((item) => {
+                    const Icon = resolveNavIcon(item.icon);
+
+                    return (
+                        <SidebarMenuItem key={item.id ?? item.title}>
+                            <SidebarMenuButton
+                                asChild
+                                isActive={isCurrentUrl(item.href)}
+                                tooltip={{ children: item.title }}
+                            >
+                                <Link href={item.href} prefetch>
+                                    {Icon && <Icon />}
+                                    <span>{item.title}</span>
+                                    {item.badge != null &&
+                                        item.badge !== '' && (
+                                            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">
+                                                {typeof item.badge ===
+                                                    'number' && item.badge > 99
+                                                    ? '99+'
+                                                    : item.badge}
+                                            </span>
+                                        )}
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    );
+                })}
             </SidebarMenu>
         </SidebarGroup>
     );

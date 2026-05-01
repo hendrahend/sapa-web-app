@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SystemPermission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SchoolClassRequest;
@@ -91,8 +92,10 @@ class SchoolClassController extends Controller
         return to_route('admin.classes.index');
     }
 
-    public function destroy(SchoolClass $schoolClass): RedirectResponse
+    public function destroy(Request $request, SchoolClass $schoolClass): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::DeleteClasses->value), 403);
+
         if ($schoolClass->students()->exists()) {
             $this->errorToast('Kelas masih memiliki siswa, pindahkan dulu sebelum menghapus.');
 

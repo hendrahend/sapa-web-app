@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RoleRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
@@ -91,8 +92,10 @@ class RolePermissionController extends Controller
         return to_route('admin.roles.index');
     }
 
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(Request $request, Role $role): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::DeleteRoles->value), 403);
+
         if (in_array($role->name, $this->protectedRoles(), true)) {
             $this->errorToast('Role bawaan SAPA tidak bisa dihapus.');
 
@@ -151,6 +154,10 @@ class RolePermissionController extends Controller
             SystemPermission::CreateRoles->value => 'Tambah role',
             SystemPermission::UpdateRoles->value => 'Ubah role',
             SystemPermission::DeleteRoles->value => 'Hapus role',
+            SystemPermission::ViewMenus->value => 'Lihat menu',
+            SystemPermission::CreateMenus->value => 'Tambah menu',
+            SystemPermission::UpdateMenus->value => 'Ubah menu',
+            SystemPermission::DeleteMenus->value => 'Hapus menu',
             SystemPermission::ViewSchoolLocations->value => 'Lihat lokasi sekolah',
             SystemPermission::CreateSchoolLocations->value => 'Tambah lokasi sekolah',
             SystemPermission::UpdateSchoolLocations->value => 'Ubah lokasi sekolah',
@@ -195,13 +202,14 @@ class RolePermissionController extends Controller
             'students' => 20,
             'classes' => 30,
             'roles' => 40,
-            'school_locations' => 50,
-            'attendance' => 60,
-            'grades' => 70,
-            'lms' => 80,
-            'xp' => 90,
-            'children' => 100,
-            'notifications' => 110,
+            'menus' => 50,
+            'school_locations' => 60,
+            'attendance' => 70,
+            'grades' => 80,
+            'lms' => 90,
+            'xp' => 100,
+            'children' => 110,
+            'notifications' => 120,
             default => 999,
         };
     }

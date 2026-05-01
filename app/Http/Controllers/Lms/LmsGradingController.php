@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Lms;
 
+use App\Enums\SystemPermission;
 use App\Http\Controllers\Controller;
 use App\Models\LmsSubmission;
 use App\Services\Groq\GroqChatService;
@@ -18,7 +19,7 @@ class LmsGradingController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        abort_unless($user, 403);
+        abort_unless($user?->can(SystemPermission::CreateLms->value), 403);
 
         $tab = $request->string('tab')->toString() ?: 'pending';
         if (! in_array($tab, ['pending', 'graded'], true)) {
@@ -97,8 +98,10 @@ class LmsGradingController extends Controller
         ]);
     }
 
-    public function aiGrade(LmsSubmission $submission, GroqChatService $groq): JsonResponse
+    public function aiGrade(Request $request, LmsSubmission $submission, GroqChatService $groq): JsonResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::CreateLms->value), 403);
+
         $submission->load('assignment');
 
         if (blank($submission->content)) {
@@ -161,6 +164,8 @@ JSON
 
     public function update(Request $request, LmsSubmission $submission): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::CreateLms->value), 403);
+
         $submission->load('assignment');
         $maxScore = $submission->assignment?->max_score ?? 100;
 

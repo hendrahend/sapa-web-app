@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SystemPermission;
 use App\Models\ClassInsight;
 use App\Models\SchoolClass;
 use App\Services\Insights\ClassInsightService;
@@ -51,6 +52,12 @@ class ClassInsightController extends Controller
 
     public function store(Request $request, ClassInsightService $service): RedirectResponse
     {
+        abort_unless(
+            ($request->user()?->can(SystemPermission::CreateGrades->value) ?? false)
+                || ($request->user()?->can(SystemPermission::UpdateGrades->value) ?? false),
+            403,
+        );
+
         $data = $request->validate([
             'school_class_id' => ['required', 'integer', 'exists:school_classes,id'],
         ]);

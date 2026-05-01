@@ -189,6 +189,8 @@ class AttendanceController extends Controller
 
     public function verifyRecord(Request $request, AttendanceRecord $record): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::UpdateAttendance->value), 403);
+
         $validated = $request->validate([
             'verification_status' => ['required', Rule::in([
                 AttendanceVerificationStatus::Approved->value,

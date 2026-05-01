@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SystemPermission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentRequest;
@@ -128,8 +129,10 @@ class StudentController extends Controller
         return to_route('admin.students.index');
     }
 
-    public function destroy(Student $student): RedirectResponse
+    public function destroy(Request $request, Student $student): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::DeleteStudents->value), 403);
+
         $student->parentUsers()->detach();
         $student->delete();
 

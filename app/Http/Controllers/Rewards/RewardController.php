@@ -109,6 +109,8 @@ class RewardController extends Controller
 
     public function adminIndex(Request $request): Response
     {
+        abort_unless($request->user()?->can(SystemPermission::ManageRewards->value), 403);
+
         $rewards = Reward::query()
             ->withCount('redemptions')
             ->orderByDesc('is_active')
@@ -168,6 +170,8 @@ class RewardController extends Controller
 
     public function adminStore(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::ManageRewards->value), 403);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -187,6 +191,8 @@ class RewardController extends Controller
 
     public function adminUpdate(Request $request, Reward $reward): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::ManageRewards->value), 403);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -201,8 +207,10 @@ class RewardController extends Controller
         return back()->with('success', 'Reward berhasil diperbarui.');
     }
 
-    public function adminDestroy(Reward $reward): RedirectResponse
+    public function adminDestroy(Request $request, Reward $reward): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::ManageRewards->value), 403);
+
         if ($reward->redemptions()->exists()) {
             return back()->withErrors(['reward' => 'Reward tidak dapat dihapus karena sudah pernah ditukar siswa. Nonaktifkan saja.']);
         }
@@ -214,6 +222,8 @@ class RewardController extends Controller
 
     public function adminDecide(Request $request, RewardRedemption $redemption, RewardService $service): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::ManageRewards->value), 403);
+
         $data = $request->validate([
             'action' => ['required', Rule::in(['approve', 'reject', 'deliver'])],
             'admin_notes' => ['nullable', 'string', 'max:500'],

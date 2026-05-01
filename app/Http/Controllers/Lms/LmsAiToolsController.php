@@ -2,26 +2,28 @@
 
 namespace App\Http\Controllers\Lms;
 
+use App\Enums\SystemPermission;
 use App\Http\Controllers\Controller;
 use App\Services\Groq\GroqChatService;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 use RuntimeException;
 
 class LmsAiToolsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): RedirectResponse
     {
-        return Inertia::render('lms/ai-tools', [
-            'aiEnabled' => filled(config('services.groq.key')),
-        ]);
+        abort_unless($request->user()?->can(SystemPermission::CreateLms->value), 403);
+
+        return to_route('lms.index');
     }
 
     public function rubrik(Request $request, GroqChatService $groq): JsonResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::CreateLms->value), 403);
+
         $data = $request->validate([
             'description' => ['required', 'string', 'max:2000'],
             'subject' => ['nullable', 'string', 'max:120'],
@@ -80,6 +82,8 @@ USR;
 
     public function soal(Request $request, GroqChatService $groq): JsonResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::CreateLms->value), 403);
+
         $data = $request->validate([
             'topic' => ['required', 'string', 'max:500'],
             'subject' => ['nullable', 'string', 'max:120'],

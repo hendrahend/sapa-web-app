@@ -11,13 +11,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { getAdminNavItems, getMainNavItems } from '@/lib/navigation';
+import { getNavGroups } from '@/lib/navigation';
 import { dashboard } from '@/routes';
 
 export function AppSidebar() {
-    const { auth } = usePage().props;
-    const mainNavItems = getMainNavItems(auth);
-    const adminNavItems = getAdminNavItems(auth);
+    const { auth, menus } = usePage().props;
+    const navGroups = getNavGroups(auth, menus);
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -34,8 +33,13 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
-                <NavMain items={adminNavItems} label="Admin" />
+                {navGroups.map((group) => (
+                    <NavMain
+                        key={group.id ?? group.title}
+                        items={group.children}
+                        label={group.title}
+                    />
+                ))}
             </SidebarContent>
 
             <SidebarFooter className="pb-3">

@@ -4,13 +4,16 @@ import {
     BrainCircuit,
     CalendarClock,
     CheckCircle2,
+    CircleAlert,
     ClipboardList,
+    FileQuestion,
     FileText,
     GraduationCap,
     LibraryBig,
     Plus,
     Send,
     Sparkles,
+    Wand2,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -36,6 +39,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { RubrikPanel, SoalPanel } from './ai-tools';
 
 type Subject = {
     id: number;
@@ -113,6 +117,7 @@ type Props = {
     materials: Material[];
     assignments: Assignment[];
     student: Student | null;
+    aiEnabled: boolean;
     stats: {
         courses: number;
         materials: number;
@@ -154,6 +159,7 @@ type AiChatMessage = {
 };
 
 type LmsModal = 'course' | 'material' | 'assignment' | null;
+type AiToolTab = 'rubrik' | 'soal';
 
 function formatDateTime(value: string | null) {
     if (!value) {
@@ -169,7 +175,7 @@ function formatDateTime(value: string | null) {
 function statItems(stats: Props['stats']) {
     return [
         {
-            label: 'Course aktif',
+            label: 'Ruang belajar',
             value: stats.courses,
             icon: LibraryBig,
         },
@@ -185,6 +191,29 @@ function statItems(stats: Props['stats']) {
         },
     ];
 }
+
+const lmsFlow = [
+    {
+        title: 'Buat ruang belajar',
+        description: 'Pilih mapel dan kelas sebagai wadah LMS.',
+        icon: LibraryBig,
+    },
+    {
+        title: 'Isi materi & tugas',
+        description: 'Materi dan tugas selalu menempel ke ruang belajar.',
+        icon: BookOpenCheck,
+    },
+    {
+        title: 'Siswa mengumpulkan',
+        description: 'Jawaban masuk ke tugas yang sudah dipublikasikan.',
+        icon: Send,
+    },
+    {
+        title: 'Nilai di Penilaian',
+        description: 'Skor dan feedback tugas LMS direview guru di Penilaian.',
+        icon: GraduationCap,
+    },
+];
 
 function currentSubmission(assignment: Assignment) {
     return assignment.submissions?.[0] ?? null;
@@ -211,6 +240,7 @@ export default function LmsIndex({
     materials,
     assignments,
     student,
+    aiEnabled,
     stats,
 }: Props) {
     const { auth } = usePage().props;
@@ -223,10 +253,13 @@ export default function LmsIndex({
     const [selectedAssignment, setSelectedAssignment] =
         useState<Assignment | null>(null);
     const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+    const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
+    const [aiToolTab, setAiToolTab] = useState<AiToolTab>('rubrik');
     const [aiInput, setAiInput] = useState('');
     const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([]);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
+    const hasCourses = courses.length > 0;
 
     useEffect(() => {
         // Hydrate AI chat history from server (per-user, persisted in DB).
@@ -272,7 +305,7 @@ export default function LmsIndex({
     const courseForm = useForm<CourseForm>({
         subject_id: subjects[0]?.id.toString() ?? '',
         school_class_id: schoolClasses[0]?.id.toString() ?? '',
-        title: 'Ruang Belajar',
+        title: 'Ruang belajar',
         description: '',
         is_active: true,
     });
@@ -308,27 +341,42 @@ export default function LmsIndex({
 
     const filteredMaterials = useMemo(
         () =>
-            selectedClassFilter === 'all'
-                ? materials
-                : materials.filter(
-                      (material) =>
-                          material.course.school_class.id.toString() ===
-                          selectedClassFilter,
-                  ),
-        [materials, selectedClassFilter],
+            materials.filter((material) => {
+                const matchesClass =
+                    selectedClassFilter === 'all' ||
+                    material.course.school_class.id.toString() ===
+                        selectedClassFilter;
+                const matchesCourse =
+                    selectedCourseId === 'all' ||
+                    material.course.id.toString() === selectedCourseId;
+
+                return matchesClass && matchesCourse;
+            }),
+        [materials, selectedClassFilter, selectedCourseId],
     );
 
     const filteredAssignments = useMemo(
         () =>
-            selectedClassFilter === 'all'
-                ? assignments
-                : assignments.filter(
-                      (assignment) =>
-                          assignment.course.school_class.id.toString() ===
-                          selectedClassFilter,
-                  ),
-        [assignments, selectedClassFilter],
+            assignments.filter((assignment) => {
+                const matchesClass =
+                    selectedClassFilter === 'all' ||
+                    assignment.course.school_class.id.toString() ===
+                        selectedClassFilter;
+                const matchesCourse =
+                    selectedCourseId === 'all' ||
+                    assignment.course.id.toString() === selectedCourseId;
+
+                return matchesClass && matchesCourse;
+            }),
+        [assignments, selectedClassFilter, selectedCourseId],
     );
+
+    const selectedCourse =
+        selectedCourseId === 'all'
+            ? null
+            : (courses.find(
+                  (course) => course.id.toString() === selectedCourseId,
+              ) ?? null);
 
     function closeModal() {
         setActiveModal(null);
@@ -351,6 +399,31 @@ export default function LmsIndex({
         submissionForm.clearErrors();
     }
 
+    function selectCourse(course: Course) {
+        setSelectedCourseId(course.id.toString());
+    }
+
+    function changeClassFilter(schoolClassId: string) {
+        setSelectedClassFilter(schoolClassId);
+        setSelectedCourseId('all');
+    }
+
+    function openMaterialModal(course?: Course | null) {
+        if (course) {
+            materialForm.setData('lms_course_id', course.id.toString());
+        }
+
+        setActiveModal('material');
+    }
+
+    function openAssignmentModal(course?: Course | null) {
+        if (course) {
+            assignmentForm.setData('lms_course_id', course.id.toString());
+        }
+
+        setActiveModal('assignment');
+    }
+
     function submitCourse(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         courseForm.post('/lms/courses', {
@@ -358,7 +431,7 @@ export default function LmsIndex({
             onSuccess: () => {
                 courseForm.setData((values) => ({
                     ...values,
-                    title: 'Ruang Belajar',
+                    title: 'Ruang belajar',
                     description: '',
                     is_active: true,
                 }));
@@ -522,46 +595,85 @@ export default function LmsIndex({
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">
-                                Materi dan tugas
+                                Ruang belajar, materi, dan tugas
                             </p>
                             <h1 className="mt-2 text-2xl font-semibold tracking-normal">
                                 LMS
                             </h1>
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                                Susun ruang belajar, materi, tugas, dan pondasi
-                                fitur AI pembelajaran.
+                                Mulai dari ruang belajar per mapel dan kelas,
+                                lalu isi dengan materi dan tugas. Tugas yang
+                                dikumpulkan siswa dinilai dari menu Penilaian.
                             </p>
                         </div>
 
                         {canManageLms && (
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    type="button"
-                                    onClick={() => setActiveModal('course')}
-                                >
-                                    <Plus />
-                                    Course
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setActiveModal('material')}
-                                >
-                                    <FileText />
-                                    Materi
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setActiveModal('assignment')}
-                                >
-                                    <ClipboardList />
-                                    Tugas
-                                </Button>
+                            <div className="grid gap-2">
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setActiveModal('course')}
+                                    >
+                                        <Plus />
+                                        Buat ruang belajar
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={!hasCourses}
+                                        onClick={() =>
+                                            openMaterialModal(selectedCourse)
+                                        }
+                                    >
+                                        <FileText />
+                                        Tambah materi
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={!hasCourses}
+                                        onClick={() =>
+                                            openAssignmentModal(selectedCourse)
+                                        }
+                                    >
+                                        <ClipboardList />
+                                        Buat tugas
+                                    </Button>
+                                </div>
+                                {!hasCourses && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Buat ruang belajar dulu sebelum menambah
+                                        materi atau tugas.
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
                 </section>
+
+                {canManageLms && (
+                    <section className="grid gap-3 md:grid-cols-4">
+                        {lmsFlow.map((step, index) => (
+                            <div
+                                key={step.title}
+                                className="rounded-lg border border-sidebar-border/70 bg-card p-4 dark:border-sidebar-border"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="grid size-8 place-items-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+                                        {index + 1}
+                                    </span>
+                                    <step.icon className="size-4 text-primary" />
+                                </div>
+                                <h2 className="mt-4 text-sm font-semibold">
+                                    {step.title}
+                                </h2>
+                                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                                    {step.description}
+                                </p>
+                            </div>
+                        ))}
+                    </section>
+                )}
 
                 {canManageLms && (
                     <section className="grid gap-4 md:grid-cols-3">
@@ -600,8 +712,8 @@ export default function LmsIndex({
                                     </Badge>
                                 </div>
                                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                                    Tanya AI berdasarkan course, materi, dan
-                                    tugas yang sedang tampil. Cocok untuk
+                                    Tanya AI berdasarkan ruang belajar, materi,
+                                    dan tugas yang sedang tampil. Cocok untuk
                                     rangkuman, ide soal, rubrik, dan bantuan
                                     memahami materi.
                                 </p>
@@ -710,6 +822,76 @@ export default function LmsIndex({
                     </div>
                 </section>
 
+                {canManageLms && (
+                    <section className="grid gap-4">
+                        <div className="rounded-lg border border-sidebar-border/70 bg-card p-4 dark:border-sidebar-border">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div className="flex items-start gap-3">
+                                    <div className="grid size-10 place-items-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+                                        <Wand2 className="size-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold">
+                                            AI Guru
+                                        </h2>
+                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                            Buat rubrik dan soal langsung dari
+                                            LMS. Pakai ini saat menyiapkan
+                                            materi atau tugas, tanpa pindah
+                                            menu.
+                                        </p>
+                                    </div>
+                                </div>
+                                {!aiEnabled && (
+                                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+                                        <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                                        <span>
+                                            Atur <code>GROQ_API_KEY</code> untuk
+                                            mengaktifkan AI.
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setAiToolTab('rubrik')}
+                                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+                                        aiToolTab === 'rubrik'
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-sidebar-border/70 text-muted-foreground hover:bg-muted dark:border-sidebar-border'
+                                    }`}
+                                >
+                                    <BookOpenCheck className="size-4" />
+                                    Rubrik tugas
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiToolTab('soal')}
+                                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+                                        aiToolTab === 'soal'
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-sidebar-border/70 text-muted-foreground hover:bg-muted dark:border-sidebar-border'
+                                    }`}
+                                >
+                                    <FileQuestion className="size-4" />
+                                    Soal latihan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            {aiToolTab === 'rubrik' && (
+                                <RubrikPanel disabled={!aiEnabled} />
+                            )}
+                            {aiToolTab === 'soal' && (
+                                <SoalPanel disabled={!aiEnabled} />
+                            )}
+                        </div>
+                    </section>
+                )}
+
                 {canSubmitAssignments && !student && (
                     <section className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
                         Akun ini belum terhubung dengan data siswa, jadi submit
@@ -721,37 +903,52 @@ export default function LmsIndex({
                     <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
                         <div>
                             <h2 className="text-lg font-semibold">
-                                Course aktif
+                                Ruang belajar
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Ruang belajar per mapel dan kelas.
+                                Wadah utama untuk materi dan tugas per mapel
+                                serta kelas.
                             </p>
                         </div>
-                        {canManageLms && (
-                            <div className="w-full md:w-64">
-                                <Select
-                                    value={selectedClassFilter}
-                                    onValueChange={setSelectedClassFilter}
+                        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+                            {selectedCourse && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedCourseId('all')}
                                 >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Filter kelas" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            Semua kelas
-                                        </SelectItem>
-                                        {schoolClasses.map((schoolClass) => (
-                                            <SelectItem
-                                                key={schoolClass.id}
-                                                value={schoolClass.id.toString()}
-                                            >
-                                                {schoolClass.name}
+                                    Tampilkan semua
+                                </Button>
+                            )}
+                            {canManageLms && (
+                                <div className="w-full md:w-64">
+                                    <Select
+                                        value={selectedClassFilter}
+                                        onValueChange={changeClassFilter}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Filter kelas" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Semua kelas
                                             </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
+                                            {schoolClasses.map(
+                                                (schoolClass) => (
+                                                    <SelectItem
+                                                        key={schoolClass.id}
+                                                        value={schoolClass.id.toString()}
+                                                    >
+                                                        {schoolClass.name}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
@@ -759,14 +956,23 @@ export default function LmsIndex({
                             <div className="md:col-span-2 xl:col-span-3">
                                 <EmptyState
                                     icon={GraduationCap}
-                                    title="Belum ada course LMS"
-                                    description="Buat course baru untuk mulai membagikan materi dan tugas ke kelas."
+                                    title="Belum ada ruang belajar"
+                                    description="Buat ruang belajar dulu untuk mulai membagikan materi dan tugas ke kelas."
                                 />
                             </div>
                         )}
 
                         {filteredCourses.map((course) => (
-                            <article key={course.id} className="sapa-card p-4">
+                            <button
+                                key={course.id}
+                                type="button"
+                                onClick={() => selectCourse(course)}
+                                className={`sapa-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/5 ${
+                                    selectedCourseId === course.id.toString()
+                                        ? 'border-primary/60 bg-primary/5 shadow-sm'
+                                        : ''
+                                }`}
+                            >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <p className="font-medium">
@@ -806,10 +1012,80 @@ export default function LmsIndex({
                                         <span>{course.teacher.name}</span>
                                     )}
                                 </div>
-                            </article>
+                            </button>
                         ))}
                     </div>
                 </section>
+
+                {selectedCourse && (
+                    <section className="sapa-card overflow-hidden border-primary/30">
+                        <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
+                            <div>
+                                <p className="text-sm font-medium text-primary">
+                                    Ruang belajar terpilih
+                                </p>
+                                <h2 className="mt-1 text-lg font-semibold">
+                                    {selectedCourse.title}
+                                </h2>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    {selectedCourse.subject.name} -{' '}
+                                    {selectedCourse.school_class.name}
+                                </p>
+                            </div>
+                            {canManageLms && (
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            openMaterialModal(selectedCourse)
+                                        }
+                                    >
+                                        <FileText />
+                                        Tambah materi
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={() =>
+                                            openAssignmentModal(selectedCourse)
+                                        }
+                                    >
+                                        <ClipboardList />
+                                        Buat tugas
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="grid gap-4 p-4 md:grid-cols-3">
+                            <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                <p className="text-sm text-muted-foreground">
+                                    Materi
+                                </p>
+                                <p className="mt-2 text-2xl font-semibold">
+                                    {selectedCourse.materials_count}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                <p className="text-sm text-muted-foreground">
+                                    Tugas
+                                </p>
+                                <p className="mt-2 text-2xl font-semibold">
+                                    {selectedCourse.assignments_count}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                <p className="text-sm text-muted-foreground">
+                                    Status
+                                </p>
+                                <p className="mt-2 text-base font-semibold">
+                                    {selectedCourse.is_active
+                                        ? 'Aktif'
+                                        : 'Nonaktif'}
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 <section className="grid gap-4 xl:grid-cols-2">
                     <section className="sapa-card overflow-hidden">
@@ -1002,9 +1278,10 @@ export default function LmsIndex({
                     <div className="flex items-start gap-3">
                         <Sparkles className="mt-1 size-5 text-sky-700 dark:text-sky-300" />
                         <p className="text-sm leading-6 text-muted-foreground">
-                            AI LMS memakai konteks yang tampil di halaman ini.
-                            Hasilnya tetap perlu dicek guru sebelum dipakai
-                            sebagai materi, soal, atau feedback resmi.
+                            AI LMS memakai konteks ruang belajar, materi, dan
+                            tugas yang tampil di halaman ini. Hasilnya tetap
+                            perlu dicek guru sebelum dipakai sebagai materi,
+                            soal, atau feedback resmi.
                         </p>
                     </div>
                 </section>
@@ -1019,10 +1296,12 @@ export default function LmsIndex({
                         >
                             <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl">
                                 <DialogHeader>
-                                    <DialogTitle>Buat course</DialogTitle>
+                                    <DialogTitle>
+                                        Buat ruang belajar
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Buat ruang belajar berdasarkan mapel dan
-                                        kelas.
+                                        Ruang belajar adalah wadah untuk materi
+                                        dan tugas berdasarkan mapel serta kelas.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -1031,7 +1310,7 @@ export default function LmsIndex({
                                     className="grid gap-4"
                                 >
                                     <div className="grid gap-2">
-                                        <Label>Judul course</Label>
+                                        <Label>Judul ruang belajar</Label>
                                         <Input
                                             value={courseForm.data.title}
                                             onChange={(event) =>
@@ -1153,7 +1432,7 @@ export default function LmsIndex({
                                                 )
                                             }
                                         />
-                                        Course aktif
+                                        Ruang belajar aktif
                                     </label>
 
                                     <DialogFooter>
@@ -1168,7 +1447,7 @@ export default function LmsIndex({
                                             type="submit"
                                             disabled={courseForm.processing}
                                         >
-                                            Simpan course
+                                            Simpan ruang belajar
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -1185,8 +1464,8 @@ export default function LmsIndex({
                                 <DialogHeader>
                                     <DialogTitle>Tambah materi</DialogTitle>
                                     <DialogDescription>
-                                        Materi yang dipublikasikan akan muncul
-                                        di LMS siswa.
+                                        Pilih ruang belajar, lalu isi materi
+                                        yang akan tampil di LMS siswa.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -1195,7 +1474,7 @@ export default function LmsIndex({
                                     className="grid gap-4"
                                 >
                                     <div className="grid gap-2">
-                                        <Label>Course</Label>
+                                        <Label>Ruang belajar</Label>
                                         <Select
                                             value={
                                                 materialForm.data.lms_course_id
@@ -1208,7 +1487,7 @@ export default function LmsIndex({
                                             }
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Pilih course" />
+                                                <SelectValue placeholder="Pilih ruang belajar" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {courses.map((course) => (
@@ -1314,8 +1593,8 @@ export default function LmsIndex({
                                 <DialogHeader>
                                     <DialogTitle>Tambah tugas</DialogTitle>
                                     <DialogDescription>
-                                        Buat tugas untuk course tertentu dan
-                                        tentukan batas pengumpulan.
+                                        Pilih ruang belajar, tulis instruksi,
+                                        lalu tentukan batas pengumpulan.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -1324,7 +1603,7 @@ export default function LmsIndex({
                                     className="grid gap-4"
                                 >
                                     <div className="grid gap-2">
-                                        <Label>Course</Label>
+                                        <Label>Ruang belajar</Label>
                                         <Select
                                             value={
                                                 assignmentForm.data
@@ -1338,7 +1617,7 @@ export default function LmsIndex({
                                             }
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Pilih course" />
+                                                <SelectValue placeholder="Pilih ruang belajar" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {courses.map((course) => (

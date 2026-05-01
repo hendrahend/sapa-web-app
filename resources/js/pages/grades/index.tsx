@@ -338,14 +338,15 @@ export default function GradesIndex({
                 <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">
-                            Nilai dan capaian belajar
+                            Rekap nilai dan tugas LMS
                         </p>
                         <h1 className="mt-2 text-2xl font-semibold tracking-normal">
                             Penilaian
                         </h1>
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                            Satukan nilai akademik manual dan penilaian tugas
-                            LMS dalam satu tempat.
+                            Rekap nilai kelas tetap di sini. Tugas yang masuk
+                            dari LMS juga dinilai di sini supaya hasil belajar
+                            siswa tidak tercecer.
                         </p>
                     </div>
                     {canManageGrades && gradeTab === 'academic' && (
@@ -363,14 +364,14 @@ export default function GradesIndex({
                         active={gradeTab === 'academic'}
                         onClick={() => goGradeTab('academic')}
                     >
-                        Nilai Akademik
+                        Rekap Nilai
                     </TabButton>
                     {canGradeLms && (
                         <TabButton
                             active={gradeTab === 'lms'}
                             onClick={() => goGradeTab('lms')}
                         >
-                            Tugas LMS
+                            Tugas dari LMS
                         </TabButton>
                     )}
                 </div>
@@ -397,11 +398,11 @@ export default function GradesIndex({
                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div>
                                     <h2 className="font-semibold">
-                                        Nilai akademik
+                                        Rekap nilai
                                     </h2>
                                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                        Kelola komponen, input skor siswa, lalu
-                                        export rekap saat dibutuhkan.
+                                        Kelola komponen nilai, input skor siswa,
+                                        lalu export rekap saat dibutuhkan.
                                     </p>
                                 </div>
                                 {canManageGrades && (
@@ -1088,11 +1089,11 @@ function LmsGradingPanel({
                 <div className="flex items-start gap-3">
                     <BookOpenCheck className="mt-0.5 size-5 text-violet-700 dark:text-violet-300" />
                     <div>
-                        <h2 className="font-semibold">Penilaian tugas LMS</h2>
+                        <h2 className="font-semibold">Tugas dari LMS</h2>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-                            Tugas siswa dari LMS bisa dinilai di sini. AI dapat
-                            memberi draft skor dan feedback, lalu guru tetap
-                            review sebelum disimpan.
+                            Tugas yang dikumpulkan siswa di LMS bisa diberi skor
+                            dan feedback di sini. AI dapat membantu draft
+                            penilaian, lalu guru tetap review sebelum disimpan.
                         </p>
                     </div>
                 </div>

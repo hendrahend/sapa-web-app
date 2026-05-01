@@ -98,6 +98,7 @@ function groupLabel(group: string) {
         students: 'Siswa & Orang Tua',
         classes: 'Kelas',
         roles: 'Role & Permission',
+        menus: 'Menu',
         school_locations: 'Lokasi sekolah',
         attendance: 'Absensi',
         grades: 'Penilaian',

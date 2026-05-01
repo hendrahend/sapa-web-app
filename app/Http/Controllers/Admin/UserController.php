@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SystemPermission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserRequest;
@@ -117,6 +118,8 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        abort_unless($request->user()?->can(SystemPermission::DeleteUsers->value), 403);
+
         if ($user->id === $request->user()?->id) {
             $this->errorToast('Tidak bisa menghapus akun yang sedang login.');
 

@@ -8,13 +8,33 @@ import {
     IdCard,
     LayoutGrid,
     MapPinned,
+    Menu as MenuIcon,
     School,
+    Settings,
     ShieldCheck,
-    Sparkles,
     Store,
     Users,
 } from 'lucide-react';
-import type { Auth, NavItem } from '@/types';
+import type { LucideIcon } from 'lucide-react';
+import type { Auth, NavGroup, NavItem, SharedMenuItem } from '@/types';
+
+const iconMap: Record<string, LucideIcon> = {
+    Award,
+    Bell,
+    BarChart3,
+    BookOpen,
+    ClipboardCheck,
+    GraduationCap,
+    IdCard,
+    LayoutGrid,
+    MapPinned,
+    Menu: MenuIcon,
+    School,
+    Settings,
+    ShieldCheck,
+    Store,
+    Users,
+};
 
 const mainNavItems: NavItem[] = [
     {
@@ -39,12 +59,6 @@ const mainNavItems: NavItem[] = [
         href: '/lms',
         icon: BookOpen,
         permissions: ['lms.view'],
-    },
-    {
-        title: 'AI Tools',
-        href: '/lms/ai/tools',
-        icon: Sparkles,
-        permissions: ['lms.create'],
     },
     {
         title: 'Insight Kelas',
@@ -119,18 +133,84 @@ function canAccessItem(item: NavItem, auth: Auth): boolean {
     );
 }
 
-export function getMainNavItems(auth: Auth): NavItem[] {
+function hasSharedMenus(menus: unknown): menus is SharedMenuItem[] {
+    return Array.isArray(menus) && menus.length > 0;
+}
+
+function unreadNotificationBadge(item: NavItem, auth: Auth): NavItem {
+    if (item.title !== 'Notifikasi') {
+        return item;
+    }
+
+    const unread = auth.unreadNotifications ?? 0;
+
+    return { ...item, badge: unread > 0 ? unread : null };
+}
+
+export function resolveNavIcon(icon: NavItem['icon']): LucideIcon | null {
+    if (!icon) {
+        return null;
+    }
+
+    if (typeof icon !== 'string') {
+        return icon;
+    }
+
+    return iconMap[icon] ?? null;
+}
+
+function toNavItems(items: SharedMenuItem[] = []): NavItem[] {
+    return items
+        .filter((item): item is SharedMenuItem & { href: NavItem['href'] } =>
+            Boolean(item.href),
+        )
+        .map((item) => ({
+            id: item.id,
+            title: item.title,
+            href: item.href,
+            icon: item.icon,
+            badge: item.badge,
+        }));
+}
+
+export function getNavGroups(auth: Auth, menus?: SharedMenuItem[]): NavGroup[] {
+    if (hasSharedMenus(menus)) {
+        return menus
+            .map((menu) => ({
+                id: menu.id,
+                title: menu.title,
+                children: toNavItems(menu.children ?? []),
+            }))
+            .filter((group) => group.children.length > 0);
+    }
+
+    return [
+        {
+            title: 'Platform',
+            children: getMainNavItems(auth),
+        },
+        {
+            title: 'Admin',
+            children: getAdminNavItems(auth),
+        },
+    ];
+}
+
+export function getMainNavItems(
+    auth: Auth,
+    menus?: SharedMenuItem[],
+): NavItem[] {
+    if (hasSharedMenus(menus)) {
+        const platform = menus.find((item) => item.title === 'Platform');
+
+        return toNavItems(platform?.children ?? menus).map((item) =>
+            unreadNotificationBadge(item, auth),
+        );
+    }
+
     return mainNavItems
         .filter((item) => canAccessItem(item, auth))
-        .map((item) => {
-            if (item.title === 'Notifikasi') {
-                const unread = auth.unreadNotifications ?? 0;
-
-                return { ...item, badge: unread > 0 ? unread : null };
-            }
-
-            return item;
-        });
+        .map((item) => unreadNotificationBadge(item, auth));
 }
 
 export function getAdminNavItems(auth: Auth): NavItem[] {

@@ -35,16 +35,16 @@ const features: Feature[] = [
         accent: 'emerald',
     },
     {
-        title: 'Penilaian terpadu',
+        title: 'Rekap nilai yang rapi',
         description:
-            'Tugas, kuis, praktik, UTS, dan UAS dirangkum dalam satu rekap akademik. Tidak ada lagi nilai yang tercecer di banyak file.',
+            'Nilai dari tugas, kuis, praktik, UTS, dan UAS dikumpulkan dalam satu rekap. Guru tetap bisa melihat sumber nilainya tanpa mengejar banyak file.',
         icon: GraduationCap,
         accent: 'sky',
     },
     {
-        title: 'LMS + Asisten AI',
+        title: 'Tugas LMS + Asisten AI',
         description:
-            'Materi, tugas, dan diskusi terorganisir per kelas. Asisten AI siap membantu siswa belajar dan guru menyiapkan rangkuman serta umpan balik.',
+            'Materi dan tugas berjalan di LMS. Setelah siswa mengumpulkan jawaban, guru bisa memberi skor dan feedback, dibantu AI untuk draft penilaian.',
         icon: BrainCircuit,
         accent: 'violet',
     },
@@ -459,18 +459,17 @@ export default function Welcome({
                                 </motion.div>
 
                                 <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-tight text-slate-950 md:text-7xl">
-                                    Absensi, nilai, dan kabar {''}
+                                    Absensi, tugas, nilai, dan kabar {''}
                                     {/* <br /> */}
                                     <span className="text-emerald-700">
                                         dalam satu sapaan.
                                     </span>
                                 </h1>
                                 <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700 md:text-xl">
-                                    SAPA menggabungkan absensi, penilaian
-                                    akademik, LMS dengan asisten AI, sistem XP,
-                                    dan notifikasi orang tua, semua dalam satu
-                                    aplikasi yang mudah dipakai siswa, guru, dan
-                                    orang tua.
+                                    SAPA mengikuti alur sekolah dari siswa
+                                    hadir, belajar di LMS, mengumpulkan tugas,
+                                    menerima nilai, sampai orang tua mendapat
+                                    kabar. Semua tersambung dalam satu aplikasi.
                                 </p>
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -573,14 +572,14 @@ export default function Welcome({
                                 Masalah yang diselesaikan
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
-                                Disiplin, akademik, dan komunikasi sekolah
-                                seharusnya tidak terpisah.
+                                Kehadiran, tugas, nilai, dan komunikasi sekolah
+                                seharusnya saling menyambung.
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
-                                SAPA dirancang untuk menyatukan data yang
-                                biasanya tersebar di buku absensi, berkas sekolah,
-                                dan grup chat menjadi satu sistem yang
-                                konsisten untuk seluruh keluarga sekolah.
+                                SAPA dirancang supaya aktivitas harian sekolah
+                                tidak berhenti sebagai catatan terpisah. Absensi
+                                bisa memicu XP, tugas LMS bisa dinilai, dan
+                                hasil penting langsung sampai ke orang tua.
                             </p>
                         </motion.div>
 
@@ -638,14 +637,14 @@ export default function Welcome({
                                 Fitur utama
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
-                                Bukan sekadar absensi tapi ekosistem sekolah yang
-                                saling terhubung.
+                                Bukan kumpulan modul terpisah, tapi alur kerja
+                                sekolah yang saling terhubung.
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
-                                Enam modul yang bekerja sama: absensi memberi
-                                XP, nilai memicu notifikasi, LMS terhubung
-                                dengan asisten AI. Sekali setup, satu sumber
-                                kebenaran untuk seluruh sekolah.
+                                Siswa mulai dari hadir dan belajar, guru
+                                mengelola tugas serta nilai, lalu sistem
+                                mengirim pembaruan penting ke orang tua. Sekali
+                                setup, satu sumber kebenaran untuk sekolah.
                             </p>
                         </motion.div>
 
@@ -926,7 +925,8 @@ export default function Welcome({
                             <span>— Sistem Absensi & Penilaian</span>
                         </div>
                         <p>
-                            Copyright © {new Date().getFullYear()} SAPA. All rights reserved.
+                            Copyright © {new Date().getFullYear()} SAPA. All
+                            rights reserved.
                         </p>
                     </div>
                 </footer>

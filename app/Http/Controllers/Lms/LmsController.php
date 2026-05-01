@@ -94,6 +94,7 @@ class LmsController extends Controller
             'materials' => $materials,
             'assignments' => $assignments,
             'student' => $student,
+            'aiEnabled' => filled(config('services.groq.key')),
             'stats' => [
                 'courses' => LmsCourse::query()->where('is_active', true)->count(),
                 'materials' => LmsMaterial::query()->count(),

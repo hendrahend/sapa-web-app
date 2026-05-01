@@ -24,6 +24,11 @@ enum SystemPermission: string
     case UpdateRoles = 'roles.update';
     case DeleteRoles = 'roles.delete';
 
+    case ViewMenus = 'menus.view';
+    case CreateMenus = 'menus.create';
+    case UpdateMenus = 'menus.update';
+    case DeleteMenus = 'menus.delete';
+
     case ViewSchoolLocations = 'school_locations.view';
     case CreateSchoolLocations = 'school_locations.create';
     case UpdateSchoolLocations = 'school_locations.update';

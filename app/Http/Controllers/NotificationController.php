@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SystemPermission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +17,8 @@ class NotificationController extends Controller
         if (! $user) {
             abort(403);
         }
+
+        abort_unless($user->can(SystemPermission::ViewNotifications->value), 403);
 
         $statusFilter = trim((string) $request->string('status'));
         $kindFilter = trim((string) $request->string('kind'));
@@ -59,6 +62,8 @@ class NotificationController extends Controller
             abort(403);
         }
 
+        abort_unless($user->can(SystemPermission::ViewNotifications->value), 403);
+
         $user->unreadNotifications()->where('id', $id)->update(['read_at' => now()]);
 
         return back();
@@ -70,6 +75,8 @@ class NotificationController extends Controller
         if (! $user) {
             abort(403);
         }
+
+        abort_unless($user->can(SystemPermission::ViewNotifications->value), 403);
 
         $user->unreadNotifications()->update(['read_at' => now()]);
 
