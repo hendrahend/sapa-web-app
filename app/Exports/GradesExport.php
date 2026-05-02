@@ -3,6 +3,8 @@
 namespace App\Exports;
 
 use App\Models\GradeScore;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -17,18 +19,26 @@ class GradesExport implements FromCollection, ShouldAutoSize, WithHeadings, With
         private readonly ?int $schoolClassId = null,
         private readonly ?int $subjectId = null,
         private readonly ?int $assessmentId = null,
+        private readonly ?string $type = null,
+        private readonly ?string $status = null,
+        private readonly ?Carbon $startDate = null,
+        private readonly ?Carbon $endDate = null,
     ) {}
 
-    public function collection()
+    public function collection(): Collection
     {
         return GradeScore::query()
             ->with([
-                'student:id,name,nis,school_class_id',
+                'student:id,name,nis,nisn,school_class_id',
                 'student.schoolClass:id,name',
-                'assessment:id,title,type,subject_id,school_class_id,max_score,assessment_date',
+                'assessment:id,title,type,subject_id,school_class_id,teacher_id,max_score,weight,assessment_date',
                 'assessment.subject:id,name,code',
+                'assessment.teacher:id,name',
+                'grader:id,name',
             ])
             ->when($this->assessmentId, fn ($query, $id) => $query->where('grade_assessment_id', $id))
+            ->when($this->startDate, fn ($query, $start) => $query->whereDate('graded_at', '>=', $start))
+            ->when($this->endDate, fn ($query, $end) => $query->whereDate('graded_at', '<=', $end))
             ->when($this->schoolClassId, fn ($query, $id) => $query->whereHas(
                 'assessment',
                 fn ($q) => $q->where('school_class_id', $id)
@@ -37,15 +47,24 @@ class GradesExport implements FromCollection, ShouldAutoSize, WithHeadings, With
                 'assessment',
                 fn ($q) => $q->where('subject_id', $id)
             ))
+            ->when($this->type, fn ($query, $type) => $query->whereHas(
+                'assessment',
+                fn ($q) => $q->where('type', $type)
+            ))
             ->orderByDesc('graded_at')
-            ->get();
+            ->get()
+            ->when($this->status, fn (Collection $rows) => $rows
+                ->filter(fn (GradeScore $score) => $this->statusFor($score) === $this->status)
+                ->values());
     }
 
     public function headings(): array
     {
         return [
             'Tanggal Dinilai',
+            'Tanggal Penilaian',
             'NIS',
+            'NISN',
             'Nama Siswa',
             'Kelas',
             'Mata Pelajaran',
@@ -55,28 +74,34 @@ class GradesExport implements FromCollection, ShouldAutoSize, WithHeadings, With
             'Skor Maksimal',
             'Persentase',
             'Status',
+            'Bobot',
+            'Guru Penilai',
+            'Diinput Oleh',
             'Feedback',
         ];
     }
 
     public function map($row): array
     {
-        $score = (float) $row->score;
-        $maxScore = (float) ($row->assessment?->max_score ?? 100);
-        $percentage = $maxScore > 0 ? round(($score / $maxScore) * 100, 1) : 0;
+        $percentage = $this->percentage($row);
 
         return [
             optional($row->graded_at)->format('Y-m-d'),
+            optional($row->assessment?->assessment_date)->format('Y-m-d'),
             $row->student?->nis ?? '-',
+            $row->student?->nisn ?? '-',
             $row->student?->name ?? '-',
             $row->student?->schoolClass?->name ?? '-',
             $row->assessment?->subject?->name ?? '-',
             $row->assessment?->title ?? '-',
-            $row->assessment?->type?->value ?? '-',
-            $score,
-            $maxScore,
+            $this->typeLabel((string) $row->assessment?->type),
+            (float) $row->score,
+            (float) ($row->assessment?->max_score ?? 100),
             $percentage.'%',
-            $score >= 75 ? 'Tuntas' : 'Remedial',
+            $this->statusLabel($this->statusFor($row)),
+            ($row->assessment?->weight ?? 0).'%',
+            $row->assessment?->teacher?->name ?? '-',
+            $row->grader?->name ?? '-',
             $row->feedback ?? '',
         ];
     }
@@ -98,5 +123,35 @@ class GradesExport implements FromCollection, ShouldAutoSize, WithHeadings, With
     public function title(): string
     {
         return 'Rekap Nilai';
+    }
+
+    private function percentage(GradeScore $score): float
+    {
+        $value = (float) $score->score;
+        $maxScore = (float) ($score->assessment?->max_score ?? 100);
+
+        return $maxScore > 0 ? round(($value / $maxScore) * 100, 1) : 0;
+    }
+
+    private function statusFor(GradeScore $score): string
+    {
+        return $this->percentage($score) >= 75 ? 'tuntas' : 'remedial';
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return $status === 'tuntas' ? 'Tuntas' : 'Remedial';
+    }
+
+    private function typeLabel(string $type): string
+    {
+        return match ($type) {
+            'tugas' => 'Tugas',
+            'kuis' => 'Kuis',
+            'praktik' => 'Praktik',
+            'uts' => 'UTS',
+            'uas' => 'UAS',
+            default => $type !== '' ? str($type)->headline()->toString() : '-',
+        };
     }
 }

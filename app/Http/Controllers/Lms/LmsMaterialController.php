@@ -12,11 +12,16 @@ class LmsMaterialController extends Controller
     public function store(LmsMaterialRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $attachment = $request->file('attachment');
 
         LmsMaterial::create([
             'lms_course_id' => $validated['lms_course_id'],
             'title' => $validated['title'],
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? '',
+            'attachment_path' => $attachment?->store('lms-materials', 'public'),
+            'attachment_name' => $attachment?->getClientOriginalName(),
+            'attachment_mime' => $attachment?->getClientMimeType(),
+            'attachment_size' => $attachment?->getSize(),
             'published_at' => $validated['publish_now'] ? now() : null,
         ]);
 

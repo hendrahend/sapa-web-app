@@ -101,6 +101,10 @@ type AttendanceRecordRow = {
     checked_in_at: string | null;
     distance_from_school_meters: number | null;
     is_within_radius: boolean | null;
+    selfie_url: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    location_accuracy_meters: number | null;
     verification_status: string;
     review_reason?: string;
     student: {
@@ -265,6 +269,10 @@ function reviewStatusBadge(status: string) {
     );
 }
 
+function formatCoordinate(value: number | null) {
+    return value === null ? '-' : value.toFixed(6);
+}
+
 function excuseTypeBadge(type: Excuse['type']) {
     if (type === 'sakit') {
         return (
@@ -355,6 +363,8 @@ export default function AttendanceIndex({
     const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
     const [isExcuseModalOpen, setIsExcuseModalOpen] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] =
+        useState<AttendanceRecordRow | null>(null);
     const [rejectExcuse, setRejectExcuse] = useState<Excuse | null>(null);
     const [rejectNotes, setRejectNotes] = useState('');
     const [sessionPreset, setSessionPreset] =
@@ -625,12 +635,16 @@ export default function AttendanceIndex({
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <section className="flex flex-col gap-4 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
                     <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                            Kehadiran siswa
-                        </p>
+                        {/* <p className="text-sm font-medium text-muted-foreground">
+                            Rekap nilai dan tugas LMS
+                        </p> */}
                         <h1 className="mt-2 text-2xl font-semibold tracking-normal">
                             Absensi
                         </h1>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                            Rekap kehadiran siswa per sesi, sesi absensi, dan
+                            izin/sakit.
+                        </p>
                     </div>
                     {canManageAttendance && (
                         <Button
@@ -1056,7 +1070,30 @@ export default function AttendanceIndex({
 
                                             {recordsForSelectedDate.map(
                                                 (record) => (
-                                                    <tr key={record.id}>
+                                                    <tr
+                                                        key={record.id}
+                                                        tabIndex={0}
+                                                        role="button"
+                                                        onClick={() =>
+                                                            setSelectedRecord(
+                                                                record,
+                                                            )
+                                                        }
+                                                        onKeyDown={(event) => {
+                                                            if (
+                                                                event.key ===
+                                                                    'Enter' ||
+                                                                event.key ===
+                                                                    ' '
+                                                            ) {
+                                                                event.preventDefault();
+                                                                setSelectedRecord(
+                                                                    record,
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="cursor-pointer transition hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
+                                                    >
                                                         <td className="px-4 py-3 align-top">
                                                             <p className="font-medium">
                                                                 {record.student
@@ -1165,7 +1202,23 @@ export default function AttendanceIndex({
                                         {reviewRecords.map((record) => (
                                             <div
                                                 key={record.id}
-                                                className="grid gap-3 p-4 md:grid-cols-[1fr_auto]"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() =>
+                                                    setSelectedRecord(record)
+                                                }
+                                                onKeyDown={(event) => {
+                                                    if (
+                                                        event.key === 'Enter' ||
+                                                        event.key === ' '
+                                                    ) {
+                                                        event.preventDefault();
+                                                        setSelectedRecord(
+                                                            record,
+                                                        );
+                                                    }
+                                                }}
+                                                className="grid cursor-pointer gap-3 p-4 transition hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none md:grid-cols-[1fr_auto]"
                                             >
                                                 <div>
                                                     <div className="flex flex-wrap items-center gap-2">
@@ -1199,12 +1252,13 @@ export default function AttendanceIndex({
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() =>
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
                                                             verifyRecord(
                                                                 record,
                                                                 'approved',
-                                                            )
-                                                        }
+                                                            );
+                                                        }}
                                                     >
                                                         <CheckCircle2 className="size-4 text-emerald-500" />
                                                         Setujui
@@ -1212,12 +1266,13 @@ export default function AttendanceIndex({
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() =>
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
                                                             verifyRecord(
                                                                 record,
                                                                 'rejected',
-                                                            )
-                                                        }
+                                                            );
+                                                        }}
                                                     >
                                                         <XCircle className="size-4 text-rose-500" />
                                                         Tolak
@@ -1740,6 +1795,231 @@ export default function AttendanceIndex({
                                     Export
                                 </Button>
                             </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
+
+                {canManageAttendance && (
+                    <Dialog
+                        open={selectedRecord !== null}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setSelectedRecord(null);
+                            }
+                        }}
+                    >
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                            {selectedRecord && (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Detail check-in siswa
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Lihat foto, lokasi, dan status
+                                            verifikasi untuk record absensi ini.
+                                        </DialogDescription>
+                                    </DialogHeader>
+
+                                    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+                                        <div className="overflow-hidden rounded-lg border border-sidebar-border/70 bg-muted/30 dark:border-sidebar-border">
+                                            {selectedRecord.selfie_url ? (
+                                                <img
+                                                    src={
+                                                        selectedRecord.selfie_url
+                                                    }
+                                                    alt={`Selfie ${selectedRecord.student?.name ?? 'siswa'}`}
+                                                    className="aspect-[3/4] w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="grid aspect-[3/4] place-items-center p-6 text-center text-sm text-muted-foreground">
+                                                    <div>
+                                                        <Camera className="mx-auto mb-3 size-8" />
+                                                        Foto selfie belum
+                                                        tersedia.
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-3">
+                                            <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                    Siswa
+                                                </p>
+                                                <p className="mt-1 font-medium">
+                                                    {selectedRecord.student
+                                                        ?.name ?? '-'}
+                                                </p>
+                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                    {selectedRecord.student
+                                                        ?.school_class?.name ??
+                                                        selectedRecord.session
+                                                            ?.school_class
+                                                            ?.name ??
+                                                        '-'}
+                                                    {selectedRecord.student?.nis
+                                                        ? ` · NIS ${selectedRecord.student.nis}`
+                                                        : ''}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                                    <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                        Sesi
+                                                    </p>
+                                                    <p className="mt-1 font-medium">
+                                                        {selectedRecord.session
+                                                            ?.title ?? '-'}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {selectedRecord.session
+                                                            ?.attendance_date
+                                                            ? formatDate(
+                                                                  selectedRecord
+                                                                      .session
+                                                                      .attendance_date,
+                                                              )
+                                                            : '-'}{' '}
+                                                        ·{' '}
+                                                        {formatClock(
+                                                            selectedRecord.checked_in_at,
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                                    <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                        Status
+                                                    </p>
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        <Badge variant="secondary">
+                                                            {statusLabel(
+                                                                selectedRecord.status,
+                                                            )}
+                                                        </Badge>
+                                                        {reviewStatusBadge(
+                                                            selectedRecord.verification_status,
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                                    Lokasi check-in
+                                                </p>
+                                                <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                                                    <p>
+                                                        Jarak:{' '}
+                                                        {selectedRecord.distance_from_school_meters ===
+                                                        null
+                                                            ? '-'
+                                                            : `${selectedRecord.distance_from_school_meters} m`}
+                                                    </p>
+                                                    <p>
+                                                        Radius:{' '}
+                                                        {selectedRecord.is_within_radius ===
+                                                        null
+                                                            ? '-'
+                                                            : selectedRecord.is_within_radius
+                                                              ? 'Dalam radius'
+                                                              : 'Di luar radius'}
+                                                    </p>
+                                                    <p>
+                                                        Latitude:{' '}
+                                                        {formatCoordinate(
+                                                            selectedRecord.latitude,
+                                                        )}
+                                                    </p>
+                                                    <p>
+                                                        Longitude:{' '}
+                                                        {formatCoordinate(
+                                                            selectedRecord.longitude,
+                                                        )}
+                                                    </p>
+                                                    <p>
+                                                        Akurasi:{' '}
+                                                        {selectedRecord.location_accuracy_meters ===
+                                                        null
+                                                            ? '-'
+                                                            : `${selectedRecord.location_accuracy_meters} m`}
+                                                    </p>
+                                                </div>
+                                                {selectedRecord.latitude !==
+                                                    null &&
+                                                    selectedRecord.longitude !==
+                                                        null && (
+                                                        <Button
+                                                            asChild
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="mt-3"
+                                                        >
+                                                            <a
+                                                                href={`https://www.google.com/maps?q=${selectedRecord.latitude},${selectedRecord.longitude}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            >
+                                                                <MapPin />
+                                                                Buka lokasi
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                            </div>
+
+                                            {selectedRecord.review_reason && (
+                                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+                                                    {
+                                                        selectedRecord.review_reason
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <DialogFooter>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                setSelectedRecord(null)
+                                            }
+                                        >
+                                            Tutup
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                verifyRecord(
+                                                    selectedRecord,
+                                                    'rejected',
+                                                );
+                                                setSelectedRecord(null);
+                                            }}
+                                        >
+                                            <XCircle className="size-4 text-rose-500" />
+                                            Tolak
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                verifyRecord(
+                                                    selectedRecord,
+                                                    'approved',
+                                                );
+                                                setSelectedRecord(null);
+                                            }}
+                                        >
+                                            <CheckCircle2 className="size-4" />
+                                            Setujui
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
                         </DialogContent>
                     </Dialog>
                 )}

@@ -15,6 +15,7 @@ use App\Models\SchoolLocation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -236,6 +237,12 @@ class AttendanceController extends Controller
             'checked_in_at' => $record->checked_in_at?->toISOString(),
             'distance_from_school_meters' => $record->distance_from_school_meters,
             'is_within_radius' => $record->is_within_radius,
+            'selfie_url' => $record->selfie_path
+                ? Storage::disk('public')->url($record->selfie_path)
+                : null,
+            'latitude' => $record->latitude,
+            'longitude' => $record->longitude,
+            'location_accuracy_meters' => $record->location_accuracy_meters,
             'verification_status' => $record->verification_status->value,
             'student' => $record->student ? [
                 'id' => $record->student->id,

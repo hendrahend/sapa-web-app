@@ -4,6 +4,7 @@ import {
     BellRing,
     BookOpenCheck,
     CalendarCheck2,
+    Clock3,
     ClipboardCheck,
     FileText,
     GraduationCap,
@@ -26,7 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes';
 
-type Role = 'admin' | 'guru' | 'siswa' | 'orang_tua';
+type Role = 'admin' | 'guru' | 'siswa' | 'orang_tua' | 'pending';
 
 type Overview = {
     weeklyGoal: number;
@@ -416,6 +417,50 @@ function LeaderboardCard({ items }: { items: LeaderboardItem[] }) {
                 ))}
             </div>
         </article>
+    );
+}
+
+function PendingDashboard({ userName }: { userName: string }) {
+    return (
+        <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center">
+            <section className="sapa-card w-full max-w-3xl overflow-hidden">
+                <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+                    <div className="p-6 md:p-8">
+                        <Badge variant="outline" className="gap-2">
+                            <Clock3 className="size-3.5" />
+                            Menunggu verifikasi admin
+                        </Badge>
+                        <h1 className="mt-5 text-2xl font-semibold tracking-normal text-foreground">
+                            Halo, {userName}. Akunmu sedang disiapkan.
+                        </h1>
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+                            Akun baru belum punya role, jadi fitur SAPA belum
+                            dibuka. Admin sekolah perlu menetapkan role sebagai
+                            siswa, guru, orang tua, atau admin terlebih dahulu.
+                        </p>
+                        <div className="mt-6 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                            <div className="rounded-lg border border-border bg-muted/35 p-3">
+                                <p className="font-medium text-foreground">
+                                    Status
+                                </p>
+                                <p className="mt-1">Pending onboarding</p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-muted/35 p-3">
+                                <p className="font-medium text-foreground">
+                                    Langkah berikutnya
+                                </p>
+                                <p className="mt-1">Menunggu admin sekolah</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-center bg-primary/10 p-8 text-primary">
+                        <div className="grid size-28 place-items-center rounded-full border border-primary/20 bg-card shadow-sm">
+                            <Clock3 className="size-12" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     );
 }
 
@@ -1009,6 +1054,7 @@ export default function Dashboard({
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-5 p-4 md:p-6">
+                {role === 'pending' && <PendingDashboard userName={userName} />}
                 {role === 'siswa' && (
                     <StudentDashboard
                         overview={overview}

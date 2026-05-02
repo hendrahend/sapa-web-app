@@ -79,7 +79,7 @@ class DashboardController extends Controller
             }
         }
 
-        return 'siswa';
+        return 'pending';
     }
 
     private function weeklyGoal(?Student $student): int

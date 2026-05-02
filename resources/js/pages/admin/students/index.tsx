@@ -4,7 +4,9 @@ import {
     Link2,
     Pencil,
     Plus,
+    Search,
     ShieldAlert,
+    X,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -35,6 +37,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 type SchoolClass = {
     id: number;
@@ -187,6 +190,7 @@ export default function AdminStudentsIndex({
         null,
     );
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [parentSearch, setParentSearch] = useState('');
     const form = useForm<StudentForm>(emptyForm);
 
     const editingStudent = useMemo(
@@ -201,15 +205,59 @@ export default function AdminStudentsIndex({
             user.student_id === null || user.student_id === editingStudentId,
     );
 
+    const selectedParentIds = useMemo(
+        () => new Set(form.data.parent_user_ids),
+        [form.data.parent_user_ids],
+    );
+
+    const selectedParents = useMemo(
+        () =>
+            parentUsers.filter((parent) =>
+                selectedParentIds.has(parent.id.toString()),
+            ),
+        [parentUsers, selectedParentIds],
+    );
+
+    const filteredParentUsers = useMemo(() => {
+        const keyword = parentSearch.trim().toLocaleLowerCase('id-ID');
+        const matches = keyword
+            ? parentUsers.filter((parent) =>
+                  `${parent.name} ${parent.email}`
+                      .toLocaleLowerCase('id-ID')
+                      .includes(keyword),
+              )
+            : parentUsers;
+
+        return matches
+            .slice()
+            .sort((first, second) => {
+                const firstSelected = selectedParentIds.has(
+                    first.id.toString(),
+                );
+                const secondSelected = selectedParentIds.has(
+                    second.id.toString(),
+                );
+
+                if (firstSelected === secondSelected) {
+                    return first.name.localeCompare(second.name, 'id-ID');
+                }
+
+                return firstSelected ? -1 : 1;
+            })
+            .slice(0, 30);
+    }, [parentSearch, parentUsers, selectedParentIds]);
+
     function resetForm() {
         setEditingStudentId(null);
         setIsFormOpen(false);
+        setParentSearch('');
         form.clearErrors();
         form.setData(emptyForm);
     }
 
     function addStudent() {
         setEditingStudentId(null);
+        setParentSearch('');
         form.clearErrors();
         form.setData(emptyForm);
         setIsFormOpen(true);
@@ -217,6 +265,7 @@ export default function AdminStudentsIndex({
 
     function editStudent(student: StudentRow) {
         setEditingStudentId(student.id);
+        setParentSearch('');
         form.clearErrors();
         form.setData({
             user_id: student.user_id?.toString() ?? '',
@@ -242,6 +291,7 @@ export default function AdminStudentsIndex({
 
         if (!open) {
             setEditingStudentId(null);
+            setParentSearch('');
             form.clearErrors();
             form.setData(emptyForm);
         }
@@ -270,7 +320,7 @@ export default function AdminStudentsIndex({
         form.setData(
             'parent_user_ids',
             checked
-                ? [...form.data.parent_user_ids, value]
+                ? Array.from(new Set([...form.data.parent_user_ids, value]))
                 : form.data.parent_user_ids.filter((id) => id !== value),
         );
     }
@@ -707,40 +757,103 @@ export default function AdminStudentsIndex({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label>Orang tua tertaut</Label>
-                                <div className="max-h-48 overflow-y-auto rounded-md border border-input">
+                                <Label htmlFor="parent-search">
+                                    Orang tua tertaut
+                                </Label>
+
+                                {selectedParents.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedParents.map((parent) => (
+                                            <Badge
+                                                key={parent.id}
+                                                variant="secondary"
+                                                className="max-w-full gap-2 py-1 pr-1"
+                                            >
+                                                <span className="truncate">
+                                                    {parent.name}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                                    onClick={() =>
+                                                        toggleParent(
+                                                            parent.id,
+                                                            false,
+                                                        )
+                                                    }
+                                                    aria-label={`Lepas ${parent.name}`}
+                                                >
+                                                    <X className="size-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="relative">
+                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        id="parent-search"
+                                        value={parentSearch}
+                                        onChange={(event) =>
+                                            setParentSearch(event.target.value)
+                                        }
+                                        placeholder="Cari nama atau email orang tua"
+                                        className="pl-9"
+                                    />
+                                </div>
+
+                                <div className="max-h-64 overflow-y-auto rounded-md border border-input">
                                     {parentUsers.length === 0 && (
                                         <div className="p-3 text-sm text-muted-foreground">
                                             Belum ada akun orang tua.
                                         </div>
                                     )}
 
-                                    {parentUsers.map((parent) => (
-                                        <label
-                                            key={parent.id}
-                                            className="flex items-start gap-3 border-b border-sidebar-border/70 p-3 last:border-b-0 dark:border-sidebar-border"
-                                        >
-                                            <Checkbox
-                                                checked={form.data.parent_user_ids.includes(
-                                                    parent.id.toString(),
+                                    {parentUsers.length > 0 &&
+                                        filteredParentUsers.length === 0 && (
+                                            <div className="p-3 text-sm text-muted-foreground">
+                                                Orang tua tidak ditemukan.
+                                            </div>
+                                        )}
+
+                                    {filteredParentUsers.map((parent) => {
+                                        const checked = selectedParentIds.has(
+                                            parent.id.toString(),
+                                        );
+
+                                        return (
+                                            <label
+                                                key={parent.id}
+                                                className={cn(
+                                                    'flex items-start gap-3 border-b border-sidebar-border/70 p-3 transition-colors last:border-b-0 hover:bg-muted/50 dark:border-sidebar-border',
+                                                    checked && 'bg-muted/40',
                                                 )}
-                                                onCheckedChange={(checked) =>
-                                                    toggleParent(
-                                                        parent.id,
-                                                        checked === true,
-                                                    )
-                                                }
-                                            />
-                                            <span className="grid gap-1 text-sm">
-                                                <span className="font-medium">
-                                                    {parent.name}
+                                            >
+                                                <Checkbox
+                                                    checked={checked}
+                                                    onCheckedChange={(value) =>
+                                                        toggleParent(
+                                                            parent.id,
+                                                            value === true,
+                                                        )
+                                                    }
+                                                />
+                                                <span className="grid min-w-0 flex-1 gap-1 text-sm">
+                                                    <span className="truncate font-medium">
+                                                        {parent.name}
+                                                    </span>
+                                                    <span className="truncate text-muted-foreground">
+                                                        {parent.email}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {parent.children_count}{' '}
+                                                        siswa tertaut
+                                                    </span>
                                                 </span>
-                                                <span className="text-muted-foreground">
-                                                    {parent.email}
-                                                </span>
-                                            </span>
-                                        </label>
-                                    ))}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                                 <InputError
                                     message={form.errors.parent_user_ids}

@@ -8,6 +8,7 @@ use App\Models\LmsAssignment;
 use App\Models\LmsSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class LmsSubmissionController extends Controller
 {
@@ -33,20 +34,32 @@ class LmsSubmissionController extends Controller
             return back();
         }
 
-        LmsSubmission::updateOrCreate(
-            [
-                'lms_assignment_id' => $assignment->id,
-                'student_id' => $student->id,
-            ],
-            [
-                'content' => $request->validated('content'),
-                'submitted_at' => now(),
-                'score' => null,
-                'feedback' => null,
-                'graded_by_id' => null,
-                'graded_at' => null,
-            ],
-        );
+        $validated = $request->validated();
+        $attachment = $request->file('attachment');
+        $submission = LmsSubmission::firstOrNew([
+            'lms_assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+        ]);
+
+        if ($attachment) {
+            if ($submission->attachment_path) {
+                Storage::disk('public')->delete($submission->attachment_path);
+            }
+
+            $submission->attachment_path = $attachment->store('lms-submissions', 'public');
+            $submission->attachment_name = $attachment->getClientOriginalName();
+            $submission->attachment_mime = $attachment->getClientMimeType();
+            $submission->attachment_size = $attachment->getSize();
+        }
+
+        $submission->fill([
+            'content' => $validated['content'] ?? null,
+            'submitted_at' => now(),
+            'score' => null,
+            'feedback' => null,
+            'graded_by_id' => null,
+            'graded_at' => null,
+        ])->save();
 
         $this->successToast('Tugas berhasil dikumpulkan.');
 

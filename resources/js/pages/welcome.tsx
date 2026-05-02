@@ -430,7 +430,7 @@ export default function Welcome({
                 />
             </Head>
 
-            <main className="min-h-screen bg-[#f7fffb] text-slate-950">
+            <main className="min-h-screen scroll-smooth bg-[#f7fffb] text-slate-950">
                 <section className="relative isolate min-h-[760px] overflow-hidden bg-[#dff9ee]">
                     <div className="absolute inset-0 bg-[linear-gradient(#a7f3d033_1px,transparent_1px),linear-gradient(90deg,#86efac2e_1px,transparent_1px)] bg-[size:56px_56px]" />
                     <motion.div
@@ -524,10 +524,37 @@ export default function Welcome({
                                 </span>
                             </Link>
 
-                            <nav className="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex">
-                                <a href="#fitur">Fitur</a>
-                                <a href="#alur">Alur</a>
-                                <a href="#demo">Demo</a>
+                            <nav className="hidden items-center gap-1 text-sm font-medium text-slate-700 md:flex">
+                                <a
+                                    href="#fitur"
+                                    className="group relative rounded-md px-3 py-2 transition duration-200 hover:-translate-y-0.5 hover:text-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:outline-none"
+                                >
+                                    <span>Fitur</span>
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute inset-x-3 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-emerald-500 transition-transform duration-200 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                                    />
+                                </a>
+                                <a
+                                    href="#alur"
+                                    className="group relative rounded-md px-3 py-2 transition duration-200 hover:-translate-y-0.5 hover:text-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:outline-none"
+                                >
+                                    <span>Alur</span>
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute inset-x-3 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-emerald-500 transition-transform duration-200 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                                    />
+                                </a>
+                                <a
+                                    href="#demo"
+                                    className="group relative rounded-md px-3 py-2 transition duration-200 hover:-translate-y-0.5 hover:text-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:outline-none"
+                                >
+                                    <span>Demo</span>
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute inset-x-3 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-emerald-500 transition-transform duration-200 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                                    />
+                                </a>
                             </nav>
 
                             <div className="flex items-center gap-2">
@@ -649,8 +676,6 @@ export default function Welcome({
                                         <ArrowRight className="size-4" />
                                     </motion.a>
                                 </div>
-
-                                
                             </motion.div>
                         </div>
                     </div>
@@ -720,7 +745,7 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="fitur" className="bg-[#f7fffb] py-20">
+                <section id="fitur" className="scroll-mt-6 bg-[#f7fffb] py-20">
                     <div className="mx-auto max-w-7xl px-6 lg:px-8">
                         <motion.div
                             initial={
@@ -799,7 +824,7 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="alur" className="bg-[#effcf4] py-20">
+                <section id="alur" className="scroll-mt-6 bg-[#effcf4] py-20">
                     <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
                         <motion.div
                             initial={
@@ -872,7 +897,10 @@ export default function Welcome({
                     </div>
                 </section>
 
-                <section id="demo" className="bg-slate-950 py-20 text-white">
+                <section
+                    id="demo"
+                    className="scroll-mt-6 bg-slate-950 py-20 text-white"
+                >
                     <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_440px] lg:px-8">
                         <motion.div
                             initial={

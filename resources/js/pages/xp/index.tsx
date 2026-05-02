@@ -213,20 +213,21 @@ export default function XpIndex({
 
     return (
         <>
-            <Head title="XP & Gamifikasi" />
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <Head title="XP & Reward" />
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
-                    <p className="text-sm font-medium text-muted-foreground">
+                    {/* <p className="text-sm font-medium text-muted-foreground">
                         Progres dan apresiasi
-                    </p>
+                    </p> */}
                     <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-normal text-foreground">
-                        <Award className="size-6 text-amber-500" /> XP &
-                        Gamifikasi
+                        {/* <Award className="size-6 text-amber-500" />  */}
+                        XP &
+                        Reward
                     </h1>
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
                         Setiap absensi tepat waktu, nilai bagus, dan tugas LMS
                         yang dikumpulkan menambah XP. Naik level, kumpulkan
-                        badge, lalu tukarkan XP di toko reward.
+                        badge, lalu tukarkan XP di toko.
                     </p>
                 </section>
 
