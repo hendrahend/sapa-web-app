@@ -1,5 +1,5 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Plus, UserRoundPlus } from 'lucide-react';
+import { Pencil, Plus, UserRoundPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -45,6 +45,9 @@ type UserRow = {
     student: {
         id: number;
         name: string;
+        nis: string | null;
+        nisn: string | null;
+        gender: string | null;
         school_class: {
             id: number;
             name: string;
@@ -129,9 +132,13 @@ export default function AdminUsersIndex({
 }: Props) {
     const { auth } = usePage().props;
     const canCreateUsers = auth.permissions.includes('users.create');
+    const canUpdateUsers = auth.permissions.includes('users.update');
     const canDeleteUsers = auth.permissions.includes('users.delete');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<UserRow | null>(null);
     const form = useForm<UserForm>(emptyForm);
+    const isEditing = editingUser !== null;
+    const isDialogOpen = isCreateOpen || isEditing;
     const shouldCreateStudentProfile =
         form.data.role === 'siswa' && form.data.create_student_profile;
 
@@ -139,23 +146,58 @@ export default function AdminUsersIndex({
         form.clearErrors();
         form.setData(emptyForm);
         setIsCreateOpen(false);
+        setEditingUser(null);
     }
 
-    function changeCreateOpen(open: boolean) {
-        setIsCreateOpen(open);
-
+    function changeDialogOpen(open: boolean) {
         if (!open) {
             resetForm();
         }
     }
 
+    function openCreate() {
+        form.clearErrors();
+        form.setData(emptyForm);
+        setEditingUser(null);
+        setIsCreateOpen(true);
+    }
+
+    function openEdit(user: UserRow) {
+        const currentRole = user.roles[0] ?? '';
+
+        form.clearErrors();
+        form.setData({
+            name: user.name,
+            email: user.email,
+            password: '',
+            role: currentRole,
+            email_verified: user.email_verified_at !== null,
+            create_student_profile:
+                currentRole === 'siswa' && user.student !== null,
+            school_class_id: user.student?.school_class?.id.toString() ?? '',
+            nis: user.student?.nis ?? '',
+            nisn: user.student?.nisn ?? '',
+            gender: user.student?.gender ?? '',
+        });
+        setIsCreateOpen(false);
+        setEditingUser(user);
+    }
+
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        form.post('/admin/users', {
+        const options = {
             preserveScroll: true,
             onSuccess: resetForm,
-        });
+        };
+
+        if (editingUser) {
+            form.put(`/admin/users/${editingUser.id}`, options);
+
+            return;
+        }
+
+        form.post('/admin/users', options);
     }
 
     function changeRole(role: string) {
@@ -163,7 +205,10 @@ export default function AdminUsersIndex({
             ...values,
             role,
             create_student_profile:
-                role === 'siswa' ? values.create_student_profile : false,
+                role === 'siswa'
+                    ? values.create_student_profile ||
+                      (editingUser !== null && editingUser.student === null)
+                    : false,
             school_class_id: role === 'siswa' ? values.school_class_id : '',
             nis: role === 'siswa' ? values.nis : '',
             nisn: role === 'siswa' ? values.nisn : '',
@@ -190,23 +235,25 @@ export default function AdminUsersIndex({
                         </p>
                     </div>
                     {canCreateUsers && (
-                        <Button
-                            type="button"
-                            onClick={() => setIsCreateOpen(true)}
-                        >
+                        <Button type="button" onClick={openCreate}>
                             <Plus />
                             Tambah pengguna
                         </Button>
                     )}
                 </section>
 
-                <Dialog open={isCreateOpen} onOpenChange={changeCreateOpen}>
+                <Dialog open={isDialogOpen} onOpenChange={changeDialogOpen}>
                     <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
                         <DialogHeader>
-                            <DialogTitle>Tambah pengguna</DialogTitle>
+                            <DialogTitle>
+                                {isEditing
+                                    ? 'Edit pengguna'
+                                    : 'Tambah pengguna'}
+                            </DialogTitle>
                             <DialogDescription>
-                                Buat akun baru dan tetapkan role awal. Password
-                                kosong akan memakai default password.
+                                {isEditing
+                                    ? 'Perbarui data akun, status email, dan role pengguna.'
+                                    : 'Buat akun baru dan tetapkan role awal. Password kosong akan memakai default password.'}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -250,7 +297,7 @@ export default function AdminUsersIndex({
                                 <div className="grid gap-2">
                                     <Label>Role</Label>
                                     <Select
-                                        value={form.data.role}
+                                        value={form.data.role || undefined}
                                         onValueChange={changeRole}
                                     >
                                         <SelectTrigger className="w-full">
@@ -271,7 +318,11 @@ export default function AdminUsersIndex({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label htmlFor="password">
+                                        {isEditing
+                                            ? 'Password baru'
+                                            : 'Password'}
+                                    </Label>
                                     <Input
                                         id="password"
                                         type="password"
@@ -282,7 +333,11 @@ export default function AdminUsersIndex({
                                                 event.target.value,
                                             )
                                         }
-                                        placeholder="default: password"
+                                        placeholder={
+                                            isEditing
+                                                ? 'kosongkan jika tidak diubah'
+                                                : 'default: password'
+                                        }
                                     />
                                     <InputError
                                         message={form.errors.password}
@@ -318,7 +373,9 @@ export default function AdminUsersIndex({
                                                 )
                                             }
                                         />
-                                        Buat profil siswa sekaligus
+                                        {isEditing
+                                            ? 'Buat/perbarui profil siswa'
+                                            : 'Buat profil siswa sekaligus'}
                                     </label>
                                     <InputError
                                         message={
@@ -464,8 +521,10 @@ export default function AdminUsersIndex({
                                     type="submit"
                                     disabled={form.processing}
                                 >
-                                    <UserRoundPlus />
-                                    Simpan pengguna
+                                    {isEditing ? <Pencil /> : <UserRoundPlus />}
+                                    {isEditing
+                                        ? 'Simpan perubahan'
+                                        : 'Simpan pengguna'}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -490,10 +549,16 @@ export default function AdminUsersIndex({
                                     name: 'role',
                                     placeholder: 'Semua role',
                                     value: filters.role,
-                                    options: roles.map((role) => ({
-                                        value: role.name,
-                                        label: role.label,
-                                    })),
+                                    options: [
+                                        {
+                                            value: '__none',
+                                            label: 'Tanpa role',
+                                        },
+                                        ...roles.map((role) => ({
+                                            value: role.name,
+                                            label: role.label,
+                                        })),
+                                    ],
                                 },
                             ]}
                         />
@@ -610,15 +675,30 @@ export default function AdminUsersIndex({
                                             <td className="px-4 py-3 align-top text-muted-foreground">
                                                 {formatDate(user.created_at)}
                                             </td>
-                                            <td className="px-4 py-3 text-right align-top">
-                                                {canDeleteUsers && (
-                                                    <ConfirmDelete
-                                                        url={`/admin/users/${user.id}`}
-                                                        title="Hapus pengguna?"
-                                                        description={`Akun ${user.name} (${user.email}) dan profil siswa terkait akan dihapus permanen.`}
-                                                        triggerLabel="Hapus"
-                                                    />
-                                                )}
+                                            <td className="px-4 py-3 align-top">
+                                                <div className="flex justify-end gap-2">
+                                                    {canUpdateUsers && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                openEdit(user)
+                                                            }
+                                                        >
+                                                            <Pencil />
+                                                            Edit
+                                                        </Button>
+                                                    )}
+                                                    {canDeleteUsers && (
+                                                        <ConfirmDelete
+                                                            url={`/admin/users/${user.id}`}
+                                                            title="Hapus pengguna?"
+                                                            description={`Akun ${user.name} (${user.email}) dan profil siswa terkait akan dihapus permanen.`}
+                                                            triggerLabel="Hapus"
+                                                        />
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

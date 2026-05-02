@@ -4,6 +4,7 @@ import {
     CheckCircle2,
     Clock3,
     Loader2,
+    Paperclip,
     Sparkles,
     Wand2,
 } from 'lucide-react';
@@ -17,7 +18,11 @@ import { Label } from '@/components/ui/label';
 
 type Submission = {
     id: number;
-    content: string;
+    content: string | null;
+    attachment_url: string | null;
+    attachment_name: string | null;
+    attachment_mime: string | null;
+    attachment_size: number | null;
     submitted_at: string | null;
     score: number | null;
     feedback: string | null;
@@ -260,8 +265,14 @@ function SubmissionCard({
                 </div>
             </div>
             <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                {submission.content}
+                {submission.content ?? 'Jawaban dikirim sebagai file.'}
             </p>
+            {submission.attachment_url && (
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                    <Paperclip className="size-4" />
+                    {submission.attachment_name ?? 'Lampiran jawaban'}
+                </span>
+            )}
         </button>
     );
 }
@@ -301,7 +312,11 @@ function ReviewDialog({
                             ?.getAttribute('content') ?? '',
                 },
             });
-            const data = await res.json().catch(() => ({}) as { message?: string; ai_grade_data?: AiGrade });
+            const data = await res
+                .json()
+                .catch(
+                    () => ({}) as { message?: string; ai_grade_data?: AiGrade },
+                );
 
             if (!res.ok) {
                 setAiError(data.message ?? 'Gagal menjalankan AI grading.');
@@ -390,8 +405,21 @@ function ReviewDialog({
                                 Jawaban siswa
                             </p>
                             <p className="mt-1 whitespace-pre-line">
-                                {submission.content}
+                                {submission.content ??
+                                    'Jawaban dikirim sebagai file.'}
                             </p>
+                            {submission.attachment_url && (
+                                <a
+                                    href={submission.attachment_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-3 inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                                >
+                                    <Paperclip className="size-4" />
+                                    {submission.attachment_name ??
+                                        'Lihat lampiran'}
+                                </a>
+                            )}
                         </div>
                     </div>
 
@@ -404,7 +432,11 @@ function ReviewDialog({
                                 <Button
                                     size="sm"
                                     onClick={generateAi}
-                                    disabled={!aiEnabled || aiLoading}
+                                    disabled={
+                                        !aiEnabled ||
+                                        aiLoading ||
+                                        !submission.content
+                                    }
                                     className="gap-2"
                                 >
                                     {aiLoading ? (

@@ -24,7 +24,8 @@ class LmsSubmissionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => ['required', 'string', 'min:10', 'max:10000'],
+            'content' => ['nullable', 'required_without:attachment', 'string', 'min:10', 'max:10000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,ppt,pptx,xls,xlsx,txt', 'max:10240'],
         ];
     }
 }

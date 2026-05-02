@@ -33,7 +33,7 @@ export default function Register() {
                                     tabIndex={1}
                                     autoComplete="name"
                                     name="name"
-                                    placeholder="Nama sesuai data sekolah"
+                                    placeholder="Nama lengkap"
                                     className="h-11 bg-white dark:bg-slate-950"
                                 />
                                 <InputError message={errors.name} />

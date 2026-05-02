@@ -35,7 +35,7 @@ class LmsGradingController extends Controller
                 'grader:id,name',
             ])
             ->whereHas('assignment')
-            ->whereNotNull('content')
+            ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
             ->whereNotNull('submitted_at');
 
         if ($tab === 'pending') {
@@ -55,6 +55,10 @@ class LmsGradingController extends Controller
                 return [
                     'id' => $s->id,
                     'content' => $s->content,
+                    'attachment_url' => $s->attachment_url,
+                    'attachment_name' => $s->attachment_name,
+                    'attachment_mime' => $s->attachment_mime,
+                    'attachment_size' => $s->attachment_size,
                     'submitted_at' => optional($s->submitted_at)->toIso8601String(),
                     'score' => $s->score !== null ? (float) $s->score : null,
                     'feedback' => $s->feedback,
@@ -84,13 +88,13 @@ class LmsGradingController extends Controller
             'stats' => [
                 'pending' => LmsSubmission::query()
                     ->whereHas('assignment')
-                    ->whereNotNull('content')
+                    ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
                     ->whereNotNull('submitted_at')
                     ->whereNull('graded_at')
                     ->count(),
                 'graded' => LmsSubmission::query()
                     ->whereHas('assignment')
-                    ->whereNotNull('content')
+                    ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
                     ->whereNotNull('submitted_at')
                     ->whereNotNull('graded_at')
                     ->count(),

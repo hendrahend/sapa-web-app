@@ -139,7 +139,7 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class)
-            ->only(['index', 'store', 'destroy']);
+            ->only(['index', 'store', 'update', 'destroy']);
 
         Route::resource('students', StudentController::class)
             ->only(['index', 'store', 'update', 'destroy']);

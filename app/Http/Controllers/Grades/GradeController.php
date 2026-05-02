@@ -36,6 +36,7 @@ class GradeController extends Controller
             ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])
             ->withCount('scores')
             ->withAvg('scores', 'score')
+            ->when(! $canManage && $student?->school_class_id, fn ($query) => $query->where('school_class_id', $student->school_class_id))
             ->latest('assessment_date')
             ->latest('id')
             ->limit(5)
@@ -67,7 +68,7 @@ class GradeController extends Controller
                 'assignment.course',
                 fn ($q) => $q->where('school_class_id', $schoolClassId)
             ))
-            ->whereNotNull('content')
+            ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
             ->whereNotNull('submitted_at');
 
         if ($lmsTab === 'pending') {
@@ -88,6 +89,10 @@ class GradeController extends Controller
                     return [
                         'id' => $submission->id,
                         'content' => $submission->content,
+                        'attachment_url' => $submission->attachment_url,
+                        'attachment_name' => $submission->attachment_name,
+                        'attachment_mime' => $submission->attachment_mime,
+                        'attachment_size' => $submission->attachment_size,
                         'submitted_at' => optional($submission->submitted_at)->toIso8601String(),
                         'score' => $submission->score !== null ? (float) $submission->score : null,
                         'feedback' => $submission->feedback,
@@ -130,15 +135,36 @@ class GradeController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'nis', 'school_class_id']),
+            'exportAssessments' => GradeAssessment::query()
+                ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])
+                ->withCount('scores')
+                ->withAvg('scores', 'score')
+                ->latest('assessment_date')
+                ->latest('id')
+                ->limit(200)
+                ->get(),
             'assessments' => $assessments,
             'scores' => $scores,
             'lmsSubmissions' => $lmsSubmissions,
             'aiEnabled' => filled(config('services.groq.key')),
             'student' => $student,
             'stats' => [
-                'assessments' => GradeAssessment::query()->count(),
-                'scores' => GradeScore::query()->count(),
-                'needsRemedial' => GradeScore::query()->where('score', '<', 75)->count(),
+                'assessments' => $canManage
+                    ? GradeAssessment::query()->count()
+                    : GradeAssessment::query()
+                        ->when($student?->school_class_id, fn ($query, int $schoolClassId) => $query->where('school_class_id', $schoolClassId))
+                        ->count(),
+                'scores' => $canManage
+                    ? GradeScore::query()->count()
+                    : GradeScore::query()
+                        ->when($student, fn ($query, Student $student) => $query->where('student_id', $student->id))
+                        ->count(),
+                'needsRemedial' => $canManage
+                    ? GradeScore::query()->where('score', '<', 75)->count()
+                    : GradeScore::query()
+                        ->when($student, fn ($query, Student $student) => $query->where('student_id', $student->id))
+                        ->where('score', '<', 75)
+                        ->count(),
             ],
             'lmsStats' => [
                 'pending' => $canGradeLms
@@ -148,7 +174,7 @@ class GradeController extends Controller
                             'assignment.course',
                             fn ($q) => $q->where('school_class_id', $schoolClassId)
                         ))
-                        ->whereNotNull('content')
+                        ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
                         ->whereNotNull('submitted_at')
                         ->whereNull('graded_at')
                         ->count()
@@ -160,7 +186,7 @@ class GradeController extends Controller
                             'assignment.course',
                             fn ($q) => $q->where('school_class_id', $schoolClassId)
                         ))
-                        ->whereNotNull('content')
+                        ->where(fn ($q) => $q->whereNotNull('content')->orWhereNotNull('attachment_path'))
                         ->whereNotNull('submitted_at')
                         ->whereNotNull('graded_at')
                         ->count()

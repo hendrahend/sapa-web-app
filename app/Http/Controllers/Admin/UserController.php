@@ -37,7 +37,8 @@ class UserController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             }))
-            ->when($roleFilter !== '', fn ($query) => $query->whereHas('roles', fn ($q) => $q->where('name', $roleFilter)))
+            ->when($roleFilter === '__none', fn ($query) => $query->doesntHave('roles'))
+            ->when($roleFilter !== '' && $roleFilter !== '__none', fn ($query) => $query->whereHas('roles', fn ($q) => $q->where('name', $roleFilter)))
             ->latest('id')
             ->paginate($perPage)
             ->withQueryString()
@@ -51,6 +52,9 @@ class UserController extends Controller
                 'student' => $user->student ? [
                     'id' => $user->student->id,
                     'name' => $user->student->name,
+                    'nis' => $user->student->nis,
+                    'nisn' => $user->student->nisn,
+                    'gender' => $user->student->gender,
                     'school_class' => $user->student->schoolClass ? [
                         'id' => $user->student->schoolClass->id,
                         'name' => $user->student->schoolClass->name,
@@ -112,6 +116,55 @@ class UserController extends Controller
         }
 
         $this->successToast('Pengguna berhasil ditambahkan.');
+
+        return to_route('admin.users.index');
+    }
+
+    public function update(UserRequest $request, User $user): RedirectResponse
+    {
+        $validated = $request->validated();
+        $role = $validated['role'];
+
+        if (
+            $user->hasRole(UserRole::Admin->value)
+            && $role !== UserRole::Admin->value
+            && ! User::role(UserRole::Admin->value)->whereKeyNot($user->id)->exists()
+        ) {
+            $this->errorToast('Minimal harus ada satu admin aktif.');
+
+            return back();
+        }
+
+        $data = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'email_verified_at' => $validated['email_verified']
+                ? ($user->email_verified_at ?? now())
+                : null,
+        ];
+
+        if (! empty($validated['password'])) {
+            $data['password'] = Hash::make($validated['password']);
+        }
+
+        $user->update($data);
+        $user->syncRoles([$role]);
+
+        if ($role === UserRole::Student->value && $validated['create_student_profile']) {
+            Student::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'school_class_id' => $validated['school_class_id'],
+                    'nis' => $validated['nis'] ?: null,
+                    'nisn' => $validated['nisn'] ?: null,
+                    'name' => $user->name,
+                    'gender' => $validated['gender'] ?: null,
+                    'is_active' => true,
+                ],
+            );
+        }
+
+        $this->successToast('Pengguna berhasil diperbarui.');
 
         return to_route('admin.users.index');
     }

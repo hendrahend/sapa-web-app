@@ -140,20 +140,19 @@ export default function NotificationsIndex({
     return (
         <>
             <Head title="Notifikasi" />
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <section className="flex flex-wrap items-end justify-between gap-3 border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
                     <div>
-                        <p className="text-sm font-medium text-muted-foreground">
+                        {/* <p className="text-sm font-medium text-muted-foreground">
                             Inbox notifikasi
-                        </p>
+                        </p> */}
                         <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold">
-                            <Bell className="size-6 text-amber-500" />{' '}
+                            {/* <Bell className="size-6 text-amber-500" />{' '} */}
                             Notifikasi
                         </h1>
                         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                             Kabar absensi anak (hadir, terlambat, di luar
-                            radius) dan nilai baru dikirim ke sini secara
-                            realtime.
+                            radius) dan nilai baru dikirim ke sini.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">

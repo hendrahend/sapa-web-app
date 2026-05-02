@@ -27,7 +27,8 @@ class LmsMaterialRequest extends FormRequest
         return [
             'lms_course_id' => ['required', 'integer', Rule::exists('lms_courses', 'id')],
             'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:10000'],
+            'content' => ['nullable', 'required_without:attachment', 'string', 'max:10000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,ppt,pptx,xls,xlsx,txt', 'max:10240'],
             'publish_now' => ['required', 'boolean'],
         ];
     }

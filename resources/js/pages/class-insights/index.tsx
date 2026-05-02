@@ -104,20 +104,19 @@ export default function ClassInsightsIndex({
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <section className="flex flex-col gap-3 border-b border-sidebar-border/70 pb-5 md:flex-row md:items-end md:justify-between dark:border-sidebar-border">
                     <div>
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                             <BarChart3 className="size-5 text-primary" />
                             <p className="text-sm font-medium text-muted-foreground">
                                 Insight Kelas
                             </p>
-                        </div>
+                        </div> */}
                         <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                            Ringkasan AI mingguan per kelas
+                            Insight Kelas
                         </h1>
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                            Setiap Senin pagi, AI ngumpulin metrik 7 hari
+                            Rekap metrik 7 hari
                             terakhir (kehadiran, siswa risiko remedial, tugas
-                            pending) dan kasih ringkasan + rekomendasi aksi.
-                            Bisa di-trigger manual juga.
+                            pending) dan ringkasan + rekomendasi aksi.
                         </p>
                     </div>
                     <Button

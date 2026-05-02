@@ -10,6 +10,7 @@ import {
     FileText,
     GraduationCap,
     LibraryBig,
+    Paperclip,
     Plus,
     Send,
     Sparkles,
@@ -73,6 +74,10 @@ type Material = {
     id: number;
     title: string;
     content: string;
+    attachment_url: string | null;
+    attachment_name: string | null;
+    attachment_mime: string | null;
+    attachment_size: number | null;
     published_at: string | null;
     course: Pick<Course, 'id' | 'title'> & {
         subject: Subject;
@@ -98,6 +103,10 @@ type Assignment = {
 type Submission = {
     id: number;
     content: string | null;
+    attachment_url: string | null;
+    attachment_name: string | null;
+    attachment_mime: string | null;
+    attachment_size: number | null;
     submitted_at: string | null;
     score: string | number | null;
     feedback: string | null;
@@ -137,6 +146,7 @@ type MaterialForm = {
     lms_course_id: string;
     title: string;
     content: string;
+    attachment: File | null;
     publish_now: boolean;
 };
 
@@ -151,6 +161,7 @@ type AssignmentForm = {
 
 type SubmissionForm = {
     content: string;
+    attachment: File | null;
 };
 
 type AiChatMessage = {
@@ -170,6 +181,18 @@ function formatDateTime(value: string | null) {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(value));
+}
+
+function formatFileSize(bytes: number | null) {
+    if (!bytes) {
+        return '';
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${Math.ceil(bytes / 1024)} KB`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function statItems(stats: Props['stats']) {
@@ -247,6 +270,8 @@ export default function LmsIndex({
     const canManageLms = ['lms.create', 'lms.update', 'lms.delete'].some(
         (permission) => auth.permissions.includes(permission),
     );
+    const isStudentRole = auth.roles.includes('siswa') && !canManageLms;
+    const canUseAiChat = !isStudentRole;
     const canSubmitAssignments =
         auth.permissions.includes('lms.assignments.submit') && !canManageLms;
     const [activeModal, setActiveModal] = useState<LmsModal>(null);
@@ -262,6 +287,10 @@ export default function LmsIndex({
     const hasCourses = courses.length > 0;
 
     useEffect(() => {
+        if (!canUseAiChat) {
+            return;
+        }
+
         // Hydrate AI chat history from server (per-user, persisted in DB).
         let cancelled = false;
         fetch('/lms/ai/chat', {
@@ -300,7 +329,7 @@ export default function LmsIndex({
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [canUseAiChat]);
 
     const courseForm = useForm<CourseForm>({
         subject_id: subjects[0]?.id.toString() ?? '',
@@ -313,6 +342,7 @@ export default function LmsIndex({
         lms_course_id: courses[0]?.id.toString() ?? '',
         title: 'Materi pembelajaran',
         content: '',
+        attachment: null,
         publish_now: true,
     });
     const assignmentForm = useForm<AssignmentForm>({
@@ -325,6 +355,7 @@ export default function LmsIndex({
     });
     const submissionForm = useForm<SubmissionForm>({
         content: '',
+        attachment: null,
     });
 
     const filteredCourses = useMemo(
@@ -389,7 +420,10 @@ export default function LmsIndex({
         const submission = currentSubmission(assignment);
 
         setSelectedAssignment(assignment);
-        submissionForm.setData('content', submission?.content ?? '');
+        submissionForm.setData({
+            content: submission?.content ?? '',
+            attachment: null,
+        });
         submissionForm.clearErrors();
     }
 
@@ -444,11 +478,13 @@ export default function LmsIndex({
         event.preventDefault();
         materialForm.post('/lms/materials', {
             preserveScroll: true,
+            forceFormData: true,
             onSuccess: () => {
                 materialForm.setData((values) => ({
                     ...values,
                     title: 'Materi pembelajaran',
                     content: '',
+                    attachment: null,
                     publish_now: true,
                 }));
                 closeModal();
@@ -485,6 +521,7 @@ export default function LmsIndex({
             `/lms/assignments/${selectedAssignment.id}/submissions`,
             {
                 preserveScroll: true,
+                forceFormData: true,
                 onSuccess: closeSubmissionModal,
             },
         );
@@ -524,7 +561,7 @@ export default function LmsIndex({
 
         const message = aiInput.trim();
 
-        if (!message || aiLoading) {
+        if (!canUseAiChat || !message || aiLoading) {
             return;
         }
 
@@ -582,6 +619,10 @@ export default function LmsIndex({
     }
 
     function setAiPrompt(prompt: string) {
+        if (!canUseAiChat) {
+            return;
+        }
+
         setAiInput(prompt);
         setAiError(null);
     }
@@ -594,16 +635,15 @@ export default function LmsIndex({
                 <section className="border-b border-sidebar-border/70 pb-5 dark:border-sidebar-border">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">
+                            {/* <p className="text-sm font-medium text-muted-foreground">
                                 Ruang belajar, materi, dan tugas
-                            </p>
+                            </p> */}
                             <h1 className="mt-2 text-2xl font-semibold tracking-normal">
                                 LMS
                             </h1>
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                                Mulai dari ruang belajar per mapel dan kelas,
-                                lalu isi dengan materi dan tugas. Tugas yang
-                                dikumpulkan siswa dinilai dari menu Penilaian.
+                                Rruang belajar per mapel dan kelas,
+                                materi dan tugas.
                             </p>
                         </div>
 
@@ -696,131 +736,135 @@ export default function LmsIndex({
                     </section>
                 )}
 
-                <section className="rounded-lg border border-primary/25 bg-linear-to-br from-secondary/80 to-primary/10 p-4 shadow-sm">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,460px)]">
-                        <div className="flex items-start gap-3">
-                            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm">
-                                <BrainCircuit className="size-5" />
-                            </div>
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-lg font-semibold">
-                                        AI LMS
-                                    </h2>
-                                    <Badge variant="secondary">
-                                        Groq llama-3.1
-                                    </Badge>
+                {canUseAiChat && (
+                    <section className="rounded-lg border border-primary/25 bg-linear-to-br from-secondary/80 to-primary/10 p-4 shadow-sm">
+                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,460px)]">
+                            <div className="flex items-start gap-3">
+                                <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card text-primary shadow-sm">
+                                    <BrainCircuit className="size-5" />
                                 </div>
-                                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                                    Tanya AI berdasarkan ruang belajar, materi,
-                                    dan tugas yang sedang tampil. Cocok untuk
-                                    rangkuman, ide soal, rubrik, dan bantuan
-                                    memahami materi.
-                                </p>
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setAiPrompt(
-                                                'Buatkan rangkuman singkat dari materi LMS yang tampil.',
-                                            )
-                                        }
-                                    >
-                                        <Sparkles />
-                                        Rangkum
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setAiPrompt(
-                                                'Buatkan 5 soal latihan dari materi LMS yang tampil, lengkap dengan kunci jawaban.',
-                                            )
-                                        }
-                                    >
-                                        <ClipboardList />
-                                        Soal latihan
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setAiPrompt(
-                                                'Buatkan rubrik penilaian sederhana untuk tugas LMS yang tampil.',
-                                            )
-                                        }
-                                    >
-                                        <FileText />
-                                        Rubrik
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-lg border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border">
-                            <div className="max-h-72 min-h-44 space-y-3 overflow-y-auto p-3">
-                                {aiMessages.length === 0 && (
-                                    <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-sidebar-border/70 p-4 text-center text-sm text-muted-foreground dark:border-sidebar-border">
-                                        Mulai tanya AI tentang materi atau tugas
-                                        yang sedang tampil.
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h2 className="text-lg font-semibold">
+                                            AI LMS
+                                        </h2>
+                                        <Badge variant="secondary">
+                                            Groq llama-3.1
+                                        </Badge>
                                     </div>
-                                )}
-
-                                {aiMessages.map((message, index) => (
-                                    <div
-                                        key={`${message.role}-${index}`}
-                                        className={
-                                            message.role === 'user'
-                                                ? 'ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground'
-                                                : 'max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm leading-6 whitespace-pre-wrap'
-                                        }
-                                    >
-                                        {message.content}
-                                    </div>
-                                ))}
-
-                                {aiLoading && (
-                                    <div className="max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-                                        AI sedang menyusun jawaban...
-                                    </div>
-                                )}
-                            </div>
-
-                            <form
-                                onSubmit={submitAiChat}
-                                className="border-t border-sidebar-border/70 p-3 dark:border-sidebar-border"
-                            >
-                                {aiError && (
-                                    <p className="mb-2 text-sm text-destructive">
-                                        {aiError}
+                                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                        Tanya AI berdasarkan ruang belajar,
+                                        materi, dan tugas yang sedang tampil.
+                                        Cocok untuk rangkuman, ide soal, rubrik,
+                                        dan bantuan memahami materi.
                                     </p>
-                                )}
-                                <div className="flex gap-2">
-                                    <textarea
-                                        value={aiInput}
-                                        onChange={(event) =>
-                                            setAiInput(event.target.value)
-                                        }
-                                        placeholder="Tanya AI LMS..."
-                                        rows={2}
-                                        className="min-h-11 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                    />
-                                    <Button
-                                        type="submit"
-                                        disabled={aiLoading || !aiInput.trim()}
-                                        className="self-end"
-                                    >
-                                        <Send />
-                                    </Button>
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                setAiPrompt(
+                                                    'Buatkan rangkuman singkat dari materi LMS yang tampil.',
+                                                )
+                                            }
+                                        >
+                                            <Sparkles />
+                                            Rangkum
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                setAiPrompt(
+                                                    'Buatkan 5 soal latihan dari materi LMS yang tampil, lengkap dengan kunci jawaban.',
+                                                )
+                                            }
+                                        >
+                                            <ClipboardList />
+                                            Soal latihan
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                setAiPrompt(
+                                                    'Buatkan rubrik penilaian sederhana untuk tugas LMS yang tampil.',
+                                                )
+                                            }
+                                        >
+                                            <FileText />
+                                            Rubrik
+                                        </Button>
+                                    </div>
                                 </div>
-                            </form>
+                            </div>
+
+                            <div className="rounded-lg border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border">
+                                <div className="max-h-72 min-h-44 space-y-3 overflow-y-auto p-3">
+                                    {aiMessages.length === 0 && (
+                                        <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-sidebar-border/70 p-4 text-center text-sm text-muted-foreground dark:border-sidebar-border">
+                                            Mulai tanya AI tentang materi atau
+                                            tugas yang sedang tampil.
+                                        </div>
+                                    )}
+
+                                    {aiMessages.map((message, index) => (
+                                        <div
+                                            key={`${message.role}-${index}`}
+                                            className={
+                                                message.role === 'user'
+                                                    ? 'ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground'
+                                                    : 'max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm leading-6 whitespace-pre-wrap'
+                                            }
+                                        >
+                                            {message.content}
+                                        </div>
+                                    ))}
+
+                                    {aiLoading && (
+                                        <div className="max-w-[90%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                            AI sedang menyusun jawaban...
+                                        </div>
+                                    )}
+                                </div>
+
+                                <form
+                                    onSubmit={submitAiChat}
+                                    className="border-t border-sidebar-border/70 p-3 dark:border-sidebar-border"
+                                >
+                                    {aiError && (
+                                        <p className="mb-2 text-sm text-destructive">
+                                            {aiError}
+                                        </p>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <textarea
+                                            value={aiInput}
+                                            onChange={(event) =>
+                                                setAiInput(event.target.value)
+                                            }
+                                            placeholder="Tanya AI LMS..."
+                                            rows={2}
+                                            className="min-h-11 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        />
+                                        <Button
+                                            type="submit"
+                                            disabled={
+                                                aiLoading || !aiInput.trim()
+                                            }
+                                            className="self-end"
+                                        >
+                                            <Send />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                )}
 
                 {canManageLms && (
                     <section className="grid gap-4">
@@ -1017,7 +1061,7 @@ export default function LmsIndex({
                     </div>
                 </section>
 
-                {selectedCourse && (
+                {/* {selectedCourse && (
                     <section className="sapa-card overflow-hidden border-primary/30">
                         <div className="flex flex-col gap-3 border-b border-sidebar-border/70 p-4 md:flex-row md:items-center md:justify-between dark:border-sidebar-border">
                             <div>
@@ -1085,7 +1129,7 @@ export default function LmsIndex({
                             </div>
                         </div>
                     </section>
-                )}
+                )} */}
 
                 <section className="grid gap-4 xl:grid-cols-2">
                     <section className="sapa-card overflow-hidden">
@@ -1117,8 +1161,26 @@ export default function LmsIndex({
                                                 }
                                             </p>
                                             <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                                                {material.content}
+                                                {material.content ||
+                                                    'Materi berupa lampiran file.'}
                                             </p>
+                                            {material.attachment_url && (
+                                                <a
+                                                    href={
+                                                        material.attachment_url
+                                                    }
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                                                >
+                                                    <Paperclip className="size-4" />
+                                                    {material.attachment_name ??
+                                                        'Lihat lampiran'}
+                                                    {material.attachment_size
+                                                        ? ` (${formatFileSize(material.attachment_size)})`
+                                                        : ''}
+                                                </a>
+                                            )}
                                             <p className="mt-2 text-xs text-muted-foreground">
                                                 Publikasi:{' '}
                                                 {formatDateTime(
@@ -1243,6 +1305,20 @@ export default function LmsIndex({
                                                         {submission.feedback}
                                                     </p>
                                                 )}
+                                                {submission.attachment_url && (
+                                                    <a
+                                                        href={
+                                                            submission.attachment_url
+                                                        }
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="mt-2 inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                                                    >
+                                                        <Paperclip className="size-4" />
+                                                        {submission.attachment_name ??
+                                                            'Lihat lampiran'}
+                                                    </a>
+                                                )}
                                             </div>
                                         )}
 
@@ -1274,17 +1350,19 @@ export default function LmsIndex({
                     </section>
                 </section>
 
-                <section className="rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/20">
-                    <div className="flex items-start gap-3">
-                        <Sparkles className="mt-1 size-5 text-sky-700 dark:text-sky-300" />
-                        <p className="text-sm leading-6 text-muted-foreground">
-                            AI LMS memakai konteks ruang belajar, materi, dan
-                            tugas yang tampil di halaman ini. Hasilnya tetap
-                            perlu dicek guru sebelum dipakai sebagai materi,
-                            soal, atau feedback resmi.
-                        </p>
-                    </div>
-                </section>
+                {canUseAiChat && (
+                    <section className="rounded-lg border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/20">
+                        <div className="flex items-start gap-3">
+                            <Sparkles className="mt-1 size-5 text-sky-700 dark:text-sky-300" />
+                            <p className="text-sm leading-6 text-muted-foreground">
+                                AI LMS memakai konteks ruang belajar, materi,
+                                dan tugas yang tampil di halaman ini. Hasilnya
+                                tetap perlu dicek guru sebelum dipakai sebagai
+                                materi, soal, atau feedback resmi.
+                            </p>
+                        </div>
+                    </section>
+                )}
 
                 {canManageLms && (
                     <>
@@ -1543,6 +1621,34 @@ export default function LmsIndex({
                                         <InputError
                                             message={
                                                 materialForm.errors.content
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="material-attachment">
+                                            File materi (opsional)
+                                        </Label>
+                                        <Input
+                                            id="material-attachment"
+                                            type="file"
+                                            accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+                                            onChange={(event) =>
+                                                materialForm.setData(
+                                                    'attachment',
+                                                    event.target.files?.[0] ??
+                                                        null,
+                                                )
+                                            }
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Format: gambar, PDF, Word,
+                                            PowerPoint, Excel, atau TXT (maks 10
+                                            MB).
+                                        </p>
+                                        <InputError
+                                            message={
+                                                materialForm.errors.attachment
                                             }
                                         />
                                     </div>
@@ -1820,6 +1926,58 @@ export default function LmsIndex({
                                     />
                                     <InputError
                                         message={submissionForm.errors.content}
+                                    />
+                                </div>
+
+                                {selectedAssignment &&
+                                    currentSubmission(selectedAssignment)
+                                        ?.attachment_url && (
+                                        <div className="rounded-md border border-sidebar-border/70 p-3 text-sm dark:border-sidebar-border">
+                                            <p className="font-medium">
+                                                File yang sudah terkirim
+                                            </p>
+                                            <a
+                                                href={
+                                                    currentSubmission(
+                                                        selectedAssignment,
+                                                    )?.attachment_url ?? '#'
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-2 inline-flex items-center gap-1 text-primary hover:underline"
+                                            >
+                                                <Paperclip className="size-4" />
+                                                {currentSubmission(
+                                                    selectedAssignment,
+                                                )?.attachment_name ??
+                                                    'Lihat lampiran'}
+                                            </a>
+                                        </div>
+                                    )}
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="submission-attachment">
+                                        File jawaban (opsional)
+                                    </Label>
+                                    <Input
+                                        id="submission-attachment"
+                                        type="file"
+                                        accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+                                        onChange={(event) =>
+                                            submissionForm.setData(
+                                                'attachment',
+                                                event.target.files?.[0] ?? null,
+                                            )
+                                        }
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Bisa kirim jawaban berupa file, teks,
+                                        atau keduanya. Format maks 10 MB.
+                                    </p>
+                                    <InputError
+                                        message={
+                                            submissionForm.errors.attachment
+                                        }
                                     />
                                 </div>
 
