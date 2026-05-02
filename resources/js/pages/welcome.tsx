@@ -618,17 +618,14 @@ export default function Welcome({
                                 </motion.div>
 
                                 <h1 className="mt-7 max-w-2xl text-5xl leading-[1.05] font-bold tracking-tight text-slate-950 md:text-7xl">
-                                    Absensi, tugas, nilai, dan kabar {''}
+                                    Absensi, penilaian, pembelajaran, dan komunikasi terkelola {''}
                                     {/* <br /> */}
                                     <span className="text-emerald-700">
-                                        dalam satu sapaan.
+                                        di satu platform.
                                     </span>
                                 </h1>
                                 <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700 md:text-xl">
-                                    SAPA mengikuti alur sekolah dari siswa
-                                    hadir, belajar di LMS, mengumpulkan tugas,
-                                    menerima nilai, sampai orang tua mendapat
-                                    kabar. Semua tersambung dalam satu aplikasi.
+                                    SAPA mengintegrasikan alur sekolah mulai dari kehadiran siswa, proses pembelajaran, penilaian, hingga pelaporan kepada orang tua dalam satu sistem yang terpusat.
                                 </p>
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -701,14 +698,10 @@ export default function Welcome({
                                 Masalah yang diselesaikan
                             </p>
                             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
-                                Kehadiran, tugas, nilai, dan komunikasi sekolah
-                                seharusnya saling menyambung.
+                                Tantangan administratif yang sering menghambat efektivitas sekolah
                             </h2>
                             <p className="mt-5 text-base leading-7 text-slate-600">
-                                SAPA dirancang supaya aktivitas harian sekolah
-                                tidak berhenti sebagai catatan terpisah. Absensi
-                                bisa memicu XP, tugas LMS bisa dinilai, dan
-                                hasil penting langsung sampai ke orang tua.
+                                SAPA hadir untuk mengorganisir data operasional sekolah agar tidak tersebar di berbagai media. Setiap aktivitas tercatat secara sistematis, terhubung, dan dapat diakses oleh pihak yang berwenang.
                             </p>
                         </motion.div>
 
