@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendance\AttendanceCheckInRequest;
 use App\Models\AttendanceRecord;
 use App\Models\AttendanceSession;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class AttendanceCheckInController extends Controller
 {
@@ -38,6 +40,19 @@ class AttendanceCheckInController extends Controller
             ]);
         }
 
+        $existingRecord = AttendanceRecord::query()
+            ->where('attendance_session_id', $session->id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        if ($existingRecord) {
+            $this->errorToast('Kamu sudah absen untuk sesi ini.');
+
+            return back()->withErrors([
+                'attendance_session_id' => 'Kamu sudah absen untuk sesi ini.',
+            ]);
+        }
+
         $validated = $request->validated();
         $schoolLocation = $session->schoolLocation;
         $distance = $schoolLocation->distanceTo($validated['latitude'], $validated['longitude']);
@@ -49,24 +64,42 @@ class AttendanceCheckInController extends Controller
 
         $selfiePath = $request->file('selfie')->store('attendance-selfies', 'public');
 
-        AttendanceRecord::updateOrCreate([
-            'attendance_session_id' => $session->id,
-            'student_id' => $student->id,
-        ], [
-            'status' => $lateAfter && $checkedInAt->greaterThan($lateAfter)
-                ? AttendanceStatus::Late->value
-                : AttendanceStatus::Present->value,
-            'checked_in_at' => $checkedInAt,
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'location_accuracy_meters' => $validated['location_accuracy_meters'],
-            'distance_from_school_meters' => $distance,
-            'is_within_radius' => $isWithinRadius,
-            'selfie_path' => $selfiePath,
-            'verification_status' => $isWithinRadius
-                ? AttendanceVerificationStatus::Approved->value
-                : AttendanceVerificationStatus::Pending->value,
-        ]);
+        try {
+            AttendanceRecord::create([
+                'attendance_session_id' => $session->id,
+                'student_id' => $student->id,
+                'status' => $lateAfter && $checkedInAt->greaterThan($lateAfter)
+                    ? AttendanceStatus::Late->value
+                    : AttendanceStatus::Present->value,
+                'checked_in_at' => $checkedInAt,
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+                'location_accuracy_meters' => $validated['location_accuracy_meters'],
+                'distance_from_school_meters' => $distance,
+                'is_within_radius' => $isWithinRadius,
+                'selfie_path' => $selfiePath,
+                'verification_status' => $isWithinRadius
+                    ? AttendanceVerificationStatus::Approved->value
+                    : AttendanceVerificationStatus::Pending->value,
+            ]);
+        } catch (QueryException $exception) {
+            Storage::disk('public')->delete($selfiePath);
+
+            $existingRecord = AttendanceRecord::query()
+                ->where('attendance_session_id', $session->id)
+                ->where('student_id', $student->id)
+                ->exists();
+
+            if (! $existingRecord) {
+                throw $exception;
+            }
+
+            $this->errorToast('Kamu sudah absen untuk sesi ini.');
+
+            return back()->withErrors([
+                'attendance_session_id' => 'Kamu sudah absen untuk sesi ini.',
+            ]);
+        }
 
         $this->successToast(
             $isWithinRadius

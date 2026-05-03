@@ -42,6 +42,15 @@ class GradeController extends Controller
             ->limit(5)
             ->get();
 
+        $exportAssessments = GradeAssessment::query()
+            ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])
+            ->withCount('scores')
+            ->withAvg('scores', 'score')
+            ->latest('assessment_date')
+            ->latest('id')
+            ->limit(200)
+            ->get();
+
         $scores = GradeScore::query()
             ->with([
                 'student:id,name,nis,school_class_id',
@@ -135,14 +144,17 @@ class GradeController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'nis', 'school_class_id']),
-            'exportAssessments' => GradeAssessment::query()
-                ->with(['subject:id,name,code', 'schoolClass:id,name', 'teacher:id,name'])
-                ->withCount('scores')
-                ->withAvg('scores', 'score')
-                ->latest('assessment_date')
-                ->latest('id')
-                ->limit(200)
-                ->get(),
+            'exportAssessments' => $exportAssessments,
+            'bulkScores' => GradeScore::query()
+                ->whereIn('grade_assessment_id', $exportAssessments->pluck('id'))
+                ->get(['id', 'grade_assessment_id', 'student_id', 'score', 'feedback'])
+                ->map(fn (GradeScore $score) => [
+                    'id' => $score->id,
+                    'grade_assessment_id' => $score->grade_assessment_id,
+                    'student_id' => $score->student_id,
+                    'score' => (float) $score->score,
+                    'feedback' => $score->feedback,
+                ]),
             'assessments' => $assessments,
             'scores' => $scores,
             'lmsSubmissions' => $lmsSubmissions,

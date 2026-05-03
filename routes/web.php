@@ -73,6 +73,9 @@ Route::middleware(['auth', 'verified', 'menu.permission'])->group(function () {
         Route::resource('assessments', GradeAssessmentController::class)
             ->only('store');
 
+        Route::post('scores/bulk', [GradeScoreController::class, 'bulkStore'])
+            ->name('scores.bulk-store');
+
         Route::resource('scores', GradeScoreController::class)
             ->only('store');
     });

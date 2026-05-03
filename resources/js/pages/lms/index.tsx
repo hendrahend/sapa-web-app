@@ -87,6 +87,7 @@ type Material = {
 
 type Assignment = {
     id: number;
+    grade_assessment_id: number | null;
     title: string;
     instructions: string;
     due_at: string | null;
@@ -156,6 +157,8 @@ type AssignmentForm = {
     instructions: string;
     due_at: string;
     max_score: string;
+    sync_to_gradebook: boolean;
+    gradebook_weight: string;
     is_published: boolean;
 };
 
@@ -351,6 +354,8 @@ export default function LmsIndex({
         instructions: '',
         due_at: '',
         max_score: '100',
+        sync_to_gradebook: false,
+        gradebook_weight: '10',
         is_published: true,
     });
     const submissionForm = useForm<SubmissionForm>({
@@ -503,6 +508,8 @@ export default function LmsIndex({
                     instructions: '',
                     due_at: '',
                     max_score: '100',
+                    sync_to_gradebook: false,
+                    gradebook_weight: '10',
                     is_published: true,
                 }));
                 closeModal();
@@ -642,8 +649,8 @@ export default function LmsIndex({
                                 LMS
                             </h1>
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                                Rruang belajar per mapel dan kelas,
-                                materi dan tugas.
+                                Rruang belajar per mapel dan kelas, materi dan
+                                tugas.
                             </p>
                         </div>
 
@@ -1277,6 +1284,12 @@ export default function LmsIndex({
                                                         : 'Draft'}
                                                 </span>
                                             )}
+                                            {canManageLms &&
+                                                assignment.grade_assessment_id && (
+                                                    <span>
+                                                        Masuk rekap nilai
+                                                    </span>
+                                                )}
                                         </div>
 
                                         {!canManageLms && submission && (
@@ -1833,6 +1846,52 @@ export default function LmsIndex({
                                                 }
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="rounded-lg border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                                        <label className="flex items-center gap-3 text-sm font-medium">
+                                            <Checkbox
+                                                checked={
+                                                    assignmentForm.data
+                                                        .sync_to_gradebook
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                    assignmentForm.setData(
+                                                        'sync_to_gradebook',
+                                                        checked === true,
+                                                    )
+                                                }
+                                            />
+                                            Masukkan nilai tugas ini ke rekap
+                                            nilai
+                                        </label>
+                                        {assignmentForm.data
+                                            .sync_to_gradebook && (
+                                            <div className="mt-3 grid gap-2 sm:max-w-48">
+                                                <Label>Bobot rekap %</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    value={
+                                                        assignmentForm.data
+                                                            .gradebook_weight
+                                                    }
+                                                    onChange={(event) =>
+                                                        assignmentForm.setData(
+                                                            'gradebook_weight',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        assignmentForm.errors
+                                                            .gradebook_weight
+                                                    }
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <label className="flex items-center gap-3 text-sm font-medium">
