@@ -141,6 +141,7 @@ type Props = {
     subjects: Subject[];
     schoolClasses: SchoolClass[];
     students: Student[];
+    studentClassStats?: Record<string, { active: number; total: number }>;
     exportAssessments?: Assessment[];
     bulkScores?: BulkScore[];
     assessments: Assessment[];
@@ -246,6 +247,7 @@ export default function GradesIndex({
     subjects,
     schoolClasses,
     students,
+    studentClassStats = {},
     exportAssessments: exportAssessmentsProp,
     bulkScores = [],
     assessments,
@@ -302,16 +304,59 @@ export default function GradesIndex({
             return [];
         }
 
+        // Use Number() to be resilient to string/number mismatch coming from
+        // different DB drivers or JSON serialization environments. The same
+        // comparison must work whether `school_class_id` arrives as 7 or "7".
+        const targetClassId = Number(assessment.school_class.id);
+
+        // Temporary debug logging to diagnose production data shape mismatch.
+        // Logs sample of student records and the comparison values when no
+        // students match the selected class. Remove after production is fixed.
+        if (typeof window !== 'undefined' && students.length > 0) {
+            const matched = students.filter(
+                (student) =>
+                    student.school_class_id !== null &&
+                    Number(student.school_class_id) === targetClassId,
+            );
+
+            if (matched.length === 0) {
+                const sampleStudents = students.slice(0, 3).map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    school_class_id: s.school_class_id,
+                    school_class_id_type: typeof s.school_class_id,
+                }));
+
+                // eslint-disable-next-line no-console
+                console.warn('[grades-bulk] No students matched class', {
+                    targetClassId,
+                    targetClassIdType: typeof assessment.school_class.id,
+                    targetClassRaw: assessment.school_class.id,
+                    totalStudents: students.length,
+                    sampleStudents,
+                    distinctClassIds: [
+                        ...new Set(
+                            students
+                                .map((s) => s.school_class_id)
+                                .filter((v) => v !== null),
+                        ),
+                    ],
+                });
+            }
+        }
+
         return students
             .filter(
                 (student) =>
-                    student.school_class_id === assessment.school_class.id,
+                    student.school_class_id !== null &&
+                    Number(student.school_class_id) === targetClassId,
             )
             .map((student) => {
                 const existing = bulkScores.find(
                     (score) =>
-                        score.grade_assessment_id === assessment.id &&
-                        score.student_id === student.id,
+                        Number(score.grade_assessment_id) ===
+                            Number(assessment.id) &&
+                        Number(score.student_id) === Number(student.id),
                 );
 
                 return {
@@ -1094,6 +1139,33 @@ export default function GradesIndex({
                                         {selectedAssessment.school_class.name} ·
                                         Skor maksimal{' '}
                                         {selectedAssessment.max_score}
+                                        {(() => {
+                                            const stats =
+                                                studentClassStats[
+                                                    selectedAssessment
+                                                        .school_class.id
+                                                ];
+
+                                            if (!stats) {
+                                                return null;
+                                            }
+
+                                            return (
+                                                <>
+                                                    {' '}
+                                                    · {stats.active} siswa aktif
+                                                    {stats.total !==
+                                                        stats.active && (
+                                                        <>
+                                                            {' '}
+                                                            ({stats.total -
+                                                                stats.active}{' '}
+                                                            nonaktif)
+                                                        </>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 
@@ -1118,10 +1190,154 @@ export default function GradesIndex({
                                                 <tr>
                                                     <td
                                                         colSpan={3}
-                                                        className="px-3 py-6 text-center text-muted-foreground"
+                                                        className="px-3 py-6 text-center text-sm"
                                                     >
-                                                        Tidak ada siswa untuk
-                                                        komponen ini.
+                                                        {(() => {
+                                                            if (
+                                                                !selectedAssessment
+                                                            ) {
+                                                                return (
+                                                                    <span className="text-muted-foreground">
+                                                                        Pilih
+                                                                        komponen
+                                                                        nilai
+                                                                        untuk
+                                                                        menampilkan
+                                                                        daftar
+                                                                        siswa.
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            const className =
+                                                                selectedAssessment
+                                                                    .school_class
+                                                                    .name;
+                                                            const stats =
+                                                                studentClassStats[
+                                                                    selectedAssessment
+                                                                        .school_class
+                                                                        .id
+                                                                ];
+
+                                                            if (
+                                                                !stats ||
+                                                                stats.total ===
+                                                                    0
+                                                            ) {
+                                                                return (
+                                                                    <span className="text-muted-foreground">
+                                                                        Belum
+                                                                        ada
+                                                                        siswa di
+                                                                        kelas{' '}
+                                                                        <strong>
+                                                                            {
+                                                                                className
+                                                                            }
+                                                                        </strong>
+                                                                        .
+                                                                        Tambahkan
+                                                                        siswa
+                                                                        di{' '}
+                                                                        <a
+                                                                            href="/admin/students"
+                                                                            className="underline underline-offset-2"
+                                                                        >
+                                                                            Admin
+                                                                            →
+                                                                            Siswa
+                                                                        </a>
+                                                                        ,
+                                                                        kemudian
+                                                                        assign
+                                                                        ke
+                                                                        kelas
+                                                                        ini.
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            if (
+                                                                stats.active ===
+                                                                0
+                                                            ) {
+                                                                return (
+                                                                    <span className="text-amber-700 dark:text-amber-300">
+                                                                        Kelas{' '}
+                                                                        <strong>
+                                                                            {
+                                                                                className
+                                                                            }
+                                                                        </strong>{' '}
+                                                                        tidak
+                                                                        punya
+                                                                        siswa
+                                                                        aktif (
+                                                                        {
+                                                                            stats.total
+                                                                        }{' '}
+                                                                        siswa
+                                                                        nonaktif).
+                                                                        Aktifkan
+                                                                        siswa
+                                                                        di{' '}
+                                                                        <a
+                                                                            href="/admin/students"
+                                                                            className="underline underline-offset-2"
+                                                                        >
+                                                                            Admin
+                                                                            →
+                                                                            Siswa
+                                                                        </a>
+                                                                        .
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            return (
+                                                                <span className="text-amber-700 dark:text-amber-300">
+                                                                    Kelas{' '}
+                                                                    <strong>
+                                                                        {
+                                                                            className
+                                                                        }
+                                                                    </strong>{' '}
+                                                                    punya{' '}
+                                                                    {
+                                                                        stats.active
+                                                                    }{' '}
+                                                                    siswa aktif,
+                                                                    namun
+                                                                    daftar
+                                                                    siswa belum
+                                                                    siap. Coba{' '}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            window.location.reload()
+                                                                        }
+                                                                        className="underline underline-offset-2"
+                                                                    >
+                                                                        muat
+                                                                        ulang
+                                                                        halaman
+                                                                    </button>
+                                                                    . Jika
+                                                                    masih
+                                                                    kosong,
+                                                                    laporkan ke
+                                                                    admin (kelas
+                                                                    ID:{' '}
+                                                                    {
+                                                                        selectedAssessment
+                                                                            .school_class
+                                                                            .id
+                                                                    }
+                                                                    ).
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                 </tr>
                                             )}

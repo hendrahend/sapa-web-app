@@ -144,6 +144,14 @@ class GradeController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'nis', 'school_class_id']),
+            'studentClassStats' => Student::query()
+                ->whereNotNull('school_class_id')
+                ->get(['school_class_id', 'is_active'])
+                ->groupBy('school_class_id')
+                ->map(fn ($rows) => [
+                    'active' => $rows->where('is_active', true)->count(),
+                    'total' => $rows->count(),
+                ]),
             'exportAssessments' => $exportAssessments,
             'bulkScores' => GradeScore::query()
                 ->whereIn('grade_assessment_id', $exportAssessments->pluck('id'))
