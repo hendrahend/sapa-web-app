@@ -309,6 +309,42 @@ export default function GradesIndex({
         // comparison must work whether `school_class_id` arrives as 7 or "7".
         const targetClassId = Number(assessment.school_class.id);
 
+        // Temporary debug logging to diagnose production data shape mismatch.
+        // Logs sample of student records and the comparison values when no
+        // students match the selected class. Remove after production is fixed.
+        if (typeof window !== 'undefined' && students.length > 0) {
+            const matched = students.filter(
+                (student) =>
+                    student.school_class_id !== null &&
+                    Number(student.school_class_id) === targetClassId,
+            );
+
+            if (matched.length === 0) {
+                const sampleStudents = students.slice(0, 3).map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    school_class_id: s.school_class_id,
+                    school_class_id_type: typeof s.school_class_id,
+                }));
+
+                // eslint-disable-next-line no-console
+                console.warn('[grades-bulk] No students matched class', {
+                    targetClassId,
+                    targetClassIdType: typeof assessment.school_class.id,
+                    targetClassRaw: assessment.school_class.id,
+                    totalStudents: students.length,
+                    sampleStudents,
+                    distinctClassIds: [
+                        ...new Set(
+                            students
+                                .map((s) => s.school_class_id)
+                                .filter((v) => v !== null),
+                        ),
+                    ],
+                });
+            }
+        }
+
         return students
             .filter(
                 (student) =>
