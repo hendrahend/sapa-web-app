@@ -24,6 +24,8 @@ type AttendanceData = {
     school_name: string | null;
     is_within_radius: boolean;
     distance_meters: number | null;
+    verification_status?: 'pending' | 'approved' | 'rejected' | null;
+    verification_label?: string | null;
     checked_in_at: string | null;
 };
 
@@ -35,6 +37,20 @@ type GradeData = {
     assessment_title: string | null;
     subject_name: string | null;
     score: number;
+    max_score: number | null;
+    feedback: string | null;
+    graded_at: string | null;
+};
+
+type LmsSubmissionData = {
+    kind: 'lms.submission.graded';
+    lms_submission_id: number;
+    student_id: number;
+    student_name: string | null;
+    assignment_title: string | null;
+    course_title: string | null;
+    subject_name: string | null;
+    score: number | null;
     max_score: number | null;
     feedback: string | null;
     graded_at: string | null;
@@ -55,12 +71,14 @@ type NotificationItem = {
     kind:
         | 'attendance.recorded'
         | 'grade.released'
+        | 'lms.submission.graded'
         | 'class_insight'
         | string
         | null;
     data:
         | AttendanceData
         | GradeData
+        | LmsSubmissionData
         | ClassInsightData
         | Record<string, unknown>;
     read_at: string | null;
@@ -101,6 +119,10 @@ function isAttendance(d: NotificationItem['data']): d is AttendanceData {
 
 function isGrade(d: NotificationItem['data']): d is GradeData {
     return (d as GradeData)?.kind === 'grade.released';
+}
+
+function isLmsSubmission(d: NotificationItem['data']): d is LmsSubmissionData {
+    return (d as LmsSubmissionData)?.kind === 'lms.submission.graded';
 }
 
 function isClassInsight(d: NotificationItem['data']): d is ClassInsightData {
@@ -201,7 +223,11 @@ export default function NotificationsIndex({
                                     },
                                     {
                                         value: 'grade.released',
-                                        label: 'Nilai',
+                                        label: 'Nilai rekap',
+                                    },
+                                    {
+                                        value: 'lms.submission.graded',
+                                        label: 'Tugas LMS',
                                     },
                                     {
                                         value: 'class_insight',
@@ -292,14 +318,26 @@ function NotificationRow({
     if (isAttendance(item.data)) {
         const d = item.data;
         icon = <CalendarCheck2 className="size-4" />;
-        accent = d.is_within_radius
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-            : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300';
+        const isApproved = d.verification_status === 'approved';
+        const isRejected = d.verification_status === 'rejected';
+        accent =
+            d.is_within_radius || isApproved
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : isRejected
+                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300';
         title = `${d.student_name ?? 'Siswa'} ${d.status_label ?? 'tercatat'}`;
         const time = d.checked_in_at ? formatDateTime(d.checked_in_at) : '-';
-        message = d.is_within_radius
-            ? `Check-in ${time} di ${d.school_name ?? 'sekolah'}.`
-            : `Check-in ${time}, ${d.distance_meters ?? '-'}m di luar radius — menunggu verifikasi guru.`;
+
+        if (d.is_within_radius) {
+            message = `Check-in ${time} di ${d.school_name ?? 'sekolah'}.`;
+        } else if (isApproved) {
+            message = `Check-in ${time}, ${d.distance_meters ?? '-'}m di luar radius - sudah disetujui guru.`;
+        } else if (isRejected) {
+            message = `Check-in ${time}, ${d.distance_meters ?? '-'}m di luar radius - ditolak setelah verifikasi guru.`;
+        } else {
+            message = `Check-in ${time}, ${d.distance_meters ?? '-'}m di luar radius - menunggu verifikasi guru.`;
+        }
     } else if (isGrade(item.data)) {
         const d = item.data;
         icon = <GraduationCap className="size-4" />;
@@ -313,6 +351,23 @@ function NotificationRow({
         title = `Nilai baru: ${d.assessment_title ?? 'Penilaian'}`;
         const subject = d.subject_name ? `${d.subject_name} · ` : '';
         message = `${subject}${d.student_name ?? 'Anak Anda'} mendapat ${score}${d.max_score ? '/' + d.max_score : ''}.${
+            d.feedback ? ' Feedback: ' + d.feedback : ''
+        }`;
+    } else if (isLmsSubmission(item.data)) {
+        const d = item.data;
+        icon = <GraduationCap className="size-4" />;
+        const score = d.score;
+        accent =
+            score !== null && score >= 90
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : score !== null && score >= 75
+                  ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300';
+        title = `Nilai tugas LMS: ${d.assignment_title ?? 'Tugas'}`;
+        const context = [d.subject_name, d.course_title]
+            .filter(Boolean)
+            .join(' · ');
+        message = `${context ? context + ' · ' : ''}${d.student_name ?? 'Anak Anda'} mendapat ${score ?? '-'}${d.max_score ? '/' + d.max_score : ''}.${
             d.feedback ? ' Feedback: ' + d.feedback : ''
         }`;
     } else if (isClassInsight(item.data)) {

@@ -30,6 +30,8 @@ class LmsAssignmentRequest extends FormRequest
             'instructions' => ['required', 'string', 'max:10000'],
             'due_at' => ['nullable', 'date'],
             'max_score' => ['required', 'integer', 'min:1', 'max:1000'],
+            'sync_to_gradebook' => ['required', 'boolean'],
+            'gradebook_weight' => ['required_if:sync_to_gradebook,true', 'nullable', 'integer', 'min:1', 'max:100'],
             'is_published' => ['required', 'boolean'],
         ];
     }

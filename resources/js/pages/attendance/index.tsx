@@ -146,6 +146,7 @@ type Props = {
     sessions: AttendanceSession[];
     activeSession: AttendanceSession | null;
     latestRecord: AttendanceRecord;
+    activeSessionRecord: AttendanceRecord;
     attendanceRecords?: AttendanceRecordRow[];
     todayRecords: AttendanceRecordRow[];
     reviewRecords: AttendanceRecordRow[];
@@ -339,6 +340,7 @@ export default function AttendanceIndex({
     sessions,
     activeSession,
     latestRecord,
+    activeSessionRecord,
     attendanceRecords,
     todayRecords,
     reviewRecords,
@@ -416,6 +418,7 @@ export default function AttendanceIndex({
     };
 
     const recordsForSelectedDate = attendanceRecords ?? todayRecords;
+    const hasCheckedInActiveSession = Boolean(activeSessionRecord);
 
     useEffect(() => {
         return () => {
@@ -455,6 +458,11 @@ export default function AttendanceIndex({
 
     function submitCheckIn(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+
+        if (hasCheckedInActiveSession) {
+            return;
+        }
+
         checkInForm.post('/attendance/check-in', {
             forceFormData: true,
             preserveScroll: true,
@@ -794,6 +802,26 @@ export default function AttendanceIndex({
                                         </div>
                                     )}
 
+                                    {activeSessionRecord && (
+                                        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+                                            <CheckCircle2 />
+                                            <AlertTitle>
+                                                Sudah absen di sesi ini
+                                            </AlertTitle>
+                                            <AlertDescription>
+                                                Tercatat{' '}
+                                                {formatClock(
+                                                    activeSessionRecord.checked_in_at,
+                                                )}{' '}
+                                                sebagai{' '}
+                                                {statusLabel(
+                                                    activeSessionRecord.status,
+                                                )}
+                                                .
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     <div className="overflow-hidden rounded-lg border border-sidebar-border/70 bg-black dark:border-sidebar-border">
                                         {selfiePreview ? (
                                             <img
@@ -829,6 +857,7 @@ export default function AttendanceIndex({
                                             type="button"
                                             variant="outline"
                                             onClick={startCamera}
+                                            disabled={hasCheckedInActiveSession}
                                         >
                                             <Video />
                                             Kamera
@@ -837,7 +866,10 @@ export default function AttendanceIndex({
                                             type="button"
                                             variant="outline"
                                             onClick={captureSelfie}
-                                            disabled={!cameraActive}
+                                            disabled={
+                                                !cameraActive ||
+                                                hasCheckedInActiveSession
+                                            }
                                         >
                                             <Camera />
                                             Selfie
@@ -846,7 +878,10 @@ export default function AttendanceIndex({
                                             type="button"
                                             variant="outline"
                                             onClick={getCurrentLocation}
-                                            disabled={locationLoading}
+                                            disabled={
+                                                locationLoading ||
+                                                hasCheckedInActiveSession
+                                            }
                                         >
                                             <Navigation />
                                             {locationLoading
@@ -894,11 +929,18 @@ export default function AttendanceIndex({
                                         disabled={
                                             checkInForm.processing ||
                                             !activeSession ||
-                                            !student
+                                            !student ||
+                                            hasCheckedInActiveSession
                                         }
                                     >
-                                        <Send />
-                                        Kirim Absensi
+                                        {hasCheckedInActiveSession ? (
+                                            <CheckCircle2 />
+                                        ) : (
+                                            <Send />
+                                        )}
+                                        {hasCheckedInActiveSession
+                                            ? 'Sudah Absen'
+                                            : 'Kirim Absensi'}
                                     </Button>
                                 </div>
                             </form>

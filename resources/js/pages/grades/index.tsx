@@ -89,6 +89,14 @@ type Score = {
     };
 };
 
+type BulkScore = {
+    id: number;
+    grade_assessment_id: number;
+    student_id: number;
+    score: number;
+    feedback: string | null;
+};
+
 type AiGrade = {
     suggested_score?: number;
     max_score?: number;
@@ -134,6 +142,7 @@ type Props = {
     schoolClasses: SchoolClass[];
     students: Student[];
     exportAssessments?: Assessment[];
+    bulkScores?: BulkScore[];
     assessments: Assessment[];
     scores: Score[];
     lmsSubmissions: LmsSubmission[];
@@ -163,11 +172,15 @@ type AssessmentForm = {
     description: string;
 };
 
-type ScoreForm = {
-    grade_assessment_id: string;
+type BulkScoreRow = {
     student_id: string;
     score: string;
     feedback: string;
+};
+
+type BulkScoreForm = {
+    grade_assessment_id: string;
+    scores: BulkScoreRow[];
 };
 
 type GradeExportForm = {
@@ -234,6 +247,7 @@ export default function GradesIndex({
     schoolClasses,
     students,
     exportAssessments: exportAssessmentsProp,
+    bulkScores = [],
     assessments,
     scores,
     lmsSubmissions,
@@ -279,24 +293,49 @@ export default function GradesIndex({
         weight: '10',
         description: '',
     });
-    const scoreForm = useForm<ScoreForm>({
-        grade_assessment_id: assessments[0]?.id.toString() ?? '',
-        student_id: '',
-        score: '',
-        feedback: '',
+    function scoreRowsForAssessment(assessmentId: string): BulkScoreRow[] {
+        const assessment = exportAssessmentOptions.find(
+            (item) => item.id.toString() === assessmentId,
+        );
+
+        if (!assessment) {
+            return [];
+        }
+
+        return students
+            .filter(
+                (student) =>
+                    student.school_class_id === assessment.school_class.id,
+            )
+            .map((student) => {
+                const existing = bulkScores.find(
+                    (score) =>
+                        score.grade_assessment_id === assessment.id &&
+                        score.student_id === student.id,
+                );
+
+                return {
+                    student_id: student.id.toString(),
+                    score:
+                        existing?.score !== undefined
+                            ? existing.score.toString()
+                            : '',
+                    feedback: existing?.feedback ?? '',
+                };
+            });
+    }
+
+    const bulkScoreForm = useForm<BulkScoreForm>({
+        grade_assessment_id: exportAssessmentOptions[0]?.id.toString() ?? '',
+        scores: scoreRowsForAssessment(
+            exportAssessmentOptions[0]?.id.toString() ?? '',
+        ),
     });
 
-    const selectedAssessment = assessments.find(
+    const selectedAssessment = exportAssessmentOptions.find(
         (assessment) =>
-            assessment.id.toString() === scoreForm.data.grade_assessment_id,
+            assessment.id.toString() === bulkScoreForm.data.grade_assessment_id,
     );
-    const selectableStudents = selectedAssessment
-        ? students.filter(
-              (student) =>
-                  student.school_class_id ===
-                  selectedAssessment.school_class.id,
-          )
-        : students;
 
     function submitAssessment(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -306,17 +345,32 @@ export default function GradesIndex({
         });
     }
 
+    function changeBulkAssessment(value: string) {
+        bulkScoreForm.setData({
+            grade_assessment_id: value,
+            scores: scoreRowsForAssessment(value),
+        });
+    }
+
+    function updateBulkScoreRow(
+        index: number,
+        field: 'score' | 'feedback',
+        value: string,
+    ) {
+        bulkScoreForm.setData(
+            'scores',
+            bulkScoreForm.data.scores.map((row, rowIndex) =>
+                rowIndex === index ? { ...row, [field]: value } : row,
+            ),
+        );
+    }
+
     function submitScore(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        scoreForm.post('/grades/scores', {
+        bulkScoreForm.post('/grades/scores/bulk', {
             preserveScroll: true,
             onSuccess: () => {
                 setIsScoreFormOpen(false);
-                scoreForm.setData((values) => ({
-                    ...values,
-                    score: '',
-                    feedback: '',
-                }));
             },
         });
     }
@@ -507,7 +561,7 @@ export default function GradesIndex({
                                                 }
                                             >
                                                 <Save />
-                                                Input nilai
+                                                Input massal
                                             </Button>
                                         </div>
                                     )}
@@ -982,16 +1036,16 @@ export default function GradesIndex({
                             setIsScoreFormOpen(open);
 
                             if (!open) {
-                                scoreForm.clearErrors();
+                                bulkScoreForm.clearErrors();
                             }
                         }}
                     >
-                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
                             <DialogHeader>
-                                <DialogTitle>Input nilai siswa</DialogTitle>
+                                <DialogTitle>Input nilai massal</DialogTitle>
                                 <DialogDescription>
-                                    Pilih komponen akademik dan siswa, lalu
-                                    simpan skor terbaru.
+                                    Pilih satu komponen, isi skor banyak siswa
+                                    dalam tabel, lalu simpan sekali.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -1000,108 +1054,154 @@ export default function GradesIndex({
                                     <Label>Komponen</Label>
                                     <Select
                                         value={
-                                            scoreForm.data.grade_assessment_id
+                                            bulkScoreForm.data
+                                                .grade_assessment_id
                                         }
-                                        onValueChange={(value) =>
-                                            scoreForm.setData((values) => ({
-                                                ...values,
-                                                grade_assessment_id: value,
-                                                student_id: '',
-                                            }))
-                                        }
+                                        onValueChange={changeBulkAssessment}
                                     >
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Pilih komponen" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {assessments.map((assessment) => (
-                                                <SelectItem
-                                                    key={assessment.id}
-                                                    value={assessment.id.toString()}
-                                                >
-                                                    {assessment.title} -{' '}
-                                                    {
-                                                        assessment.school_class
-                                                            .name
-                                                    }
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError
-                                        message={
-                                            scoreForm.errors.grade_assessment_id
-                                        }
-                                    />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label>Siswa</Label>
-                                    <Select
-                                        value={scoreForm.data.student_id}
-                                        onValueChange={(value) =>
-                                            scoreForm.setData(
-                                                'student_id',
-                                                value,
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Pilih siswa" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {selectableStudents.map(
-                                                (student) => (
+                                            {exportAssessmentOptions.map(
+                                                (assessment) => (
                                                     <SelectItem
-                                                        key={student.id}
-                                                        value={student.id.toString()}
+                                                        key={assessment.id}
+                                                        value={assessment.id.toString()}
                                                     >
-                                                        {student.name}
+                                                        {assessment.title} -{' '}
+                                                        {
+                                                            assessment
+                                                                .school_class
+                                                                .name
+                                                        }
                                                     </SelectItem>
                                                 ),
                                             )}
                                         </SelectContent>
                                     </Select>
                                     <InputError
-                                        message={scoreForm.errors.student_id}
+                                        message={
+                                            bulkScoreForm.errors
+                                                .grade_assessment_id
+                                        }
                                     />
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Skor</Label>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={scoreForm.data.score}
-                                        onChange={(event) =>
-                                            scoreForm.setData(
-                                                'score',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={scoreForm.errors.score}
-                                    />
-                                </div>
+                                {selectedAssessment && (
+                                    <div className="rounded-lg border border-sidebar-border/70 bg-muted/30 p-3 text-sm text-muted-foreground dark:border-sidebar-border">
+                                        Kelas{' '}
+                                        {selectedAssessment.school_class.name} ·
+                                        Skor maksimal{' '}
+                                        {selectedAssessment.max_score}
+                                    </div>
+                                )}
 
-                                <div className="grid gap-2">
-                                    <Label>Feedback</Label>
-                                    <textarea
-                                        value={scoreForm.data.feedback}
-                                        onChange={(event) =>
-                                            scoreForm.setData(
-                                                'feedback',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                    />
-                                    <InputError
-                                        message={scoreForm.errors.feedback}
-                                    />
+                                <div className="overflow-x-auto rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-muted/40 text-muted-foreground">
+                                            <tr>
+                                                <th className="px-3 py-2 font-medium">
+                                                    Siswa
+                                                </th>
+                                                <th className="w-36 px-3 py-2 font-medium">
+                                                    Skor
+                                                </th>
+                                                <th className="min-w-72 px-3 py-2 font-medium">
+                                                    Feedback
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
+                                            {bulkScoreForm.data.scores
+                                                .length === 0 && (
+                                                <tr>
+                                                    <td
+                                                        colSpan={3}
+                                                        className="px-3 py-6 text-center text-muted-foreground"
+                                                    >
+                                                        Tidak ada siswa untuk
+                                                        komponen ini.
+                                                    </td>
+                                                </tr>
+                                            )}
+
+                                            {bulkScoreForm.data.scores.map(
+                                                (row, index) => {
+                                                    const rowStudent =
+                                                        students.find(
+                                                            (student) =>
+                                                                student.id.toString() ===
+                                                                row.student_id,
+                                                        );
+
+                                                    return (
+                                                        <tr
+                                                            key={row.student_id}
+                                                        >
+                                                            <td className="px-3 py-2 align-top">
+                                                                <p className="font-medium">
+                                                                    {rowStudent?.name ??
+                                                                        '-'}
+                                                                </p>
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    NIS:{' '}
+                                                                    {rowStudent?.nis ??
+                                                                        '-'}
+                                                                </p>
+                                                            </td>
+                                                            <td className="px-3 py-2 align-top">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={
+                                                                        selectedAssessment?.max_score
+                                                                    }
+                                                                    step="0.01"
+                                                                    value={
+                                                                        row.score
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateBulkScoreRow(
+                                                                            index,
+                                                                            'score',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </td>
+                                                            <td className="px-3 py-2 align-top">
+                                                                <Input
+                                                                    value={
+                                                                        row.feedback
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateBulkScoreRow(
+                                                                            index,
+                                                                            'feedback',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                },
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
+                                <InputError
+                                    message={bulkScoreForm.errors.scores}
+                                />
 
                                 <DialogFooter>
                                     <Button
@@ -1115,10 +1215,10 @@ export default function GradesIndex({
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={scoreForm.processing}
+                                        disabled={bulkScoreForm.processing}
                                     >
                                         <Save />
-                                        Simpan nilai
+                                        Simpan semua
                                     </Button>
                                 </DialogFooter>
                             </form>

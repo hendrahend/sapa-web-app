@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceVerificationStatus;
 use App\Models\AttendanceRecord;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -62,6 +63,8 @@ class AttendanceRecordedForChild extends Notification implements ShouldQueue
             'school_name' => $record->session?->schoolLocation?->name,
             'is_within_radius' => (bool) $record->is_within_radius,
             'distance_meters' => $record->distance_from_school_meters,
+            'verification_status' => $record->verification_status?->value,
+            'verification_label' => $this->verificationLabel($record->verification_status),
             'checked_in_at' => optional($record->checked_in_at)->toIso8601String(),
         ];
     }
@@ -81,9 +84,23 @@ class AttendanceRecordedForChild extends Notification implements ShouldQueue
     private function extra(AttendanceRecord $record): string
     {
         if ($record->is_within_radius === false) {
-            return 'Catatan: anak Anda check-in di luar radius sekolah, sehingga statusnya menunggu verifikasi guru.';
+            return match ($record->verification_status) {
+                AttendanceVerificationStatus::Approved => 'Catatan: anak Anda check-in di luar radius sekolah, namun absensinya sudah disetujui guru.',
+                AttendanceVerificationStatus::Rejected => 'Catatan: anak Anda check-in di luar radius sekolah, dan absensinya ditolak setelah verifikasi guru.',
+                default => 'Catatan: anak Anda check-in di luar radius sekolah, sehingga statusnya menunggu verifikasi guru.',
+            };
         }
 
         return 'Anda akan mendapat kabar lagi jika ada update.';
+    }
+
+    private function verificationLabel(?AttendanceVerificationStatus $status): string
+    {
+        return match ($status) {
+            AttendanceVerificationStatus::Approved => 'disetujui',
+            AttendanceVerificationStatus::Rejected => 'ditolak',
+            AttendanceVerificationStatus::Pending => 'menunggu verifikasi',
+            default => 'menunggu verifikasi',
+        };
     }
 }

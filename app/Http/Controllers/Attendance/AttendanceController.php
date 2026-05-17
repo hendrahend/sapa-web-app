@@ -58,6 +58,14 @@ class AttendanceController extends Controller
                 ->first()
             : null;
 
+        $activeSessionRecord = $student && $activeSession
+            ? AttendanceRecord::query()
+                ->with('session:id,title,attendance_date')
+                ->where('attendance_session_id', $activeSession->id)
+                ->where('student_id', $student->id)
+                ->first()
+            : null;
+
         $attendanceRecords = AttendanceRecord::query()
             ->with([
                 'student:id,name,nis,school_class_id',
@@ -140,6 +148,7 @@ class AttendanceController extends Controller
             'sessions' => $sessions,
             'activeSession' => $activeSession,
             'latestRecord' => $latestRecord,
+            'activeSessionRecord' => $activeSessionRecord,
             'attendanceRecords' => $attendanceRecords,
             'todayRecords' => $attendanceRecords,
             'reviewRecords' => $reviewRecords,
